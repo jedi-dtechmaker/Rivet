@@ -1,0 +1,8 @@
+# Ignore everything in the root
+/*
+
+# Except the docs, readmes, and this ignore file!
+!/docs/
+!/README.md
+!/CONTRIBUTING.md
+!/.gitignore
