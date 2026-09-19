@@ -108,4 +108,24 @@
   .col_message {
     display: none;
   }
+  .tree_header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .commit_info {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .message {
+    flex: 1 1 100%;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .commit_meta {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
