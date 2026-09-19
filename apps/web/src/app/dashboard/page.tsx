@@ -7,6 +7,7 @@ import { BackupButton } from '@/components/BackupButton';
 import { WalletRepos } from './WalletRepos';
 import { SyncButtonClient } from './SyncButtonClient';
 import { db } from '@/lib/db';
+import type { Repository } from '@prisma/client';
 import styles from './page.module.css';
 
 export default async function Dashboard() {
@@ -31,11 +32,13 @@ export default async function Dashboard() {
 
   // Fetch our database records to see which ones are backed up
   const dbRepos = await db.findAllRepos();
-  const dbRepoMap = new Map(dbRepos.map((r: any) => [r.githubRepoId, r]));
+  const dbRepoMap = new Map<string, Repository>(
+    dbRepos.map((r: Repository) => [r.fullName, r] as [string, Repository])
+  );
 
   // Map them to our UI format
   const repos = Array.isArray(githubRepos) ? githubRepos.map((r: any) => {
-    const dbRepo: any = dbRepoMap.get(r.full_name);
+    const dbRepo = dbRepoMap.get(r.full_name);
     return {
       id: r.id.toString(),
       name: r.name,
