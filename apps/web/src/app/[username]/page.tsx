@@ -35,7 +35,7 @@ export default async function PublicProfilePage({ params }: { params: { username
   }
 
   // Filter repositories based on ownership and repo privacy
-  const visibleRepos = isOwner ? user.repositories : user.repositories.filter((r) => !r.isPrivate);
+  const visibleRepos = isOwner ? user.repositories : user.repositories.filter((r: any) => !r.isPrivate);
 
   // Stats calculations
   const totalRepos = visibleRepos.length;
