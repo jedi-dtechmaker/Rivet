@@ -39,7 +39,7 @@ export default async function PublicProfilePage({ params }: { params: { username
 
   // Stats calculations
   const totalRepos = visibleRepos.length;
-  const securedRepos = visibleRepos.filter(r => r.isBackedUp).length;
+  const securedRepos = visibleRepos.filter((r: any) => r.isBackedUp).length;
   const joinedDate = new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   
   // Use a generic github avatar URL or the authenticated session image if it's the owner
