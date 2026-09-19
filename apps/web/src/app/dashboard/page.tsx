@@ -35,7 +35,7 @@ export default async function Dashboard() {
 
   // Map them to our UI format
   const repos = Array.isArray(githubRepos) ? githubRepos.map((r: any) => {
-    const dbRepo = dbRepoMap.get(r.full_name);
+    const dbRepo: any = dbRepoMap.get(r.full_name);
     return {
       id: r.id.toString(),
       name: r.name,
