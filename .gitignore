@@ -1,8 +1,32 @@
-# Ignore everything in the root
-/*
+# dependencies
+node_modules
+.pnpm-store
 
-# Except the docs, readmes, and this ignore file!
-!/docs/
-!/README.md
-!/CONTRIBUTING.md
-!/.gitignore
+# testing
+coverage
+
+# next.js
+.next/
+out/
+build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+.env.*.local
+
+# vercel/netlify
+.vercel
+.netlify
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

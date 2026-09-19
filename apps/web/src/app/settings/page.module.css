@@ -1,0 +1,135 @@
+.settings_container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  margin-bottom: 2.5rem;
+}
+
+.header__content {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  color: var(--color-text-dim);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form_group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form_label_row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.form_icon {
+  color: var(--color-primary);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.help_text {
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.toggle_wrapper {
+  margin-left: auto;
+  padding-left: 1rem;
+}
+
+.toggle_input {
+  display: none;
+}
+
+.toggle_label {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+  background-color: var(--color-border);
+  border-radius: 13px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.toggle_label::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.toggle_input:checked + .toggle_label {
+  background-color: var(--color-success);
+}
+
+.toggle_input:checked + .toggle_label::after {
+  transform: translateX(24px);
+}
+
+.divider {
+  border: 0;
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 2rem 0;
+  opacity: 0.5;
+}
+
+.form_actions {
+  margin-top: 2.5rem;
+  display: flex;
+  justify-content: flex-end;
+}

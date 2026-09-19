@@ -1,0 +1,35 @@
+{
+  "name": "@proof/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@ckb-ccc/connector-react": "^2.1.4",
+    "@ckb-ccc/core": "^1.21.0",
+    "@prisma/client": "5.14.0",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^18.0.0",
+    "lucide-react": "^0.460.0",
+    "merkletreejs": "^0.6.0",
+    "next": "^14.2.0",
+    "next-auth": "^4.24.15",
+    "pg": "^8.23.0",
+    "pinata-web3": "^0.5.4",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "prisma": "5.14.0",
+    "typescript": "^5.6.0"
+  }
+}

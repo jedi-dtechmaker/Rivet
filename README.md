@@ -146,7 +146,7 @@ Rivet/
 
 1. **Developers own their code** — Not platforms, not corporations. You.
 2. **Timestamps are sacred** — Every commit date is preserved, always.
-3. **Proof is permanent** — CKB anchors can't be deleted, edited, or censored.
+3. **Rivet is permanent** — CKB anchors can't be deleted, edited, or censored.
 4. **Works WITH GitHub** — We're not asking you to leave. We're giving you insurance.
 5. **Open source, always** — Rivet itself is open source. No vendor lock-in, ever.
 

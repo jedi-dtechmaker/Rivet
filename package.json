@@ -1,0 +1,31 @@
+{
+  "name": "proof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PROOF — Provable Repository of Open & Onchain Files",
+  "scripts": {
+    "dev": "pnpm --filter @proof/web dev",
+    "build": "pnpm --filter @proof/web build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "keywords": [
+    "ckb",
+    "rgb++",
+    "ccc",
+    "git",
+    "decentralized",
+    "code-hosting",
+    "blockchain"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^27.8.0",
+    "vercel": "^59.22.0"
+  }
+}

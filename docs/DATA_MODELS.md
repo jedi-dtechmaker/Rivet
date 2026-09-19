@@ -45,7 +45,7 @@ Created during backup anchoring. One Cell per backup event.
 │                                                         │
 │  type_script:                                           │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │  code_hash: <ProofTimestampTypeScript>           │   │
+│  │  code_hash: <RivetTimestampTypeScript>           │   │
 │  │  hash_type: type                                 │   │
 │  │  args:      <unique_id>                          │   │
 │  └─────────────────────────────────────────────────┘   │

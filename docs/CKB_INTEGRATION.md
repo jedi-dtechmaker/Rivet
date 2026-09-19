@@ -177,7 +177,7 @@ Rivet creates **Timestamp Cells** on CKB. Each Cell contains:
 │  }                                                      │
 │                                                         │
 │  lock: <owner's lock script>                            │
-│  type: <ProofTimestampTypeScript>                       │
+│  type: <RivetTimestampTypeScript>                       │
 └─────────────────────────────────────────────────────────┘
 ```
 

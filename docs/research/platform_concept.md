@@ -141,7 +141,7 @@ Storing full repos on-chain is expensive and unnecessary. Instead:
 |---|---|---|
 | **Hot storage** | Full Git repos, working trees | IPFS pinning nodes / Arweave (permanent) |
 | **Metadata index** | Repo names, descriptions, search index, stars | PostgreSQL + optional CKB cells |
-| **Proof layer** | Commit hashes, merkle roots, timestamps, signatures | **CKB Cells** (on-chain, permanent, ~200-500 CKB per anchor) |
+| **Rivet layer** | Commit hashes, merkle roots, timestamps, signatures | **CKB Cells** (on-chain, permanent, ~200-500 CKB per anchor) |
 | **Ownership layer** | Project tokens, contributor DOBs, licenses | **RGB++ on CKB** (on-chain) |
 
 > **Key insight**: You don't need to store code on-chain. You store the **rivet** on-chain — the hash, the timestamp, the signature. The code lives on IPFS/Arweave where it's content-addressable and verifiable against the on-chain rivet.
@@ -150,7 +150,7 @@ Storing full repos on-chain is expensive and unnecessary. Instead:
 
 ## Feature Roadmap
 
-### Phase 1: MVP — "Proof of Code" 🏗️
+### Phase 1: MVP — "Rivet of Code" 🏗️
 - [ ] Web UI for browsing repositories (read-only initially)
 - [ ] CCC wallet login (MetaMask, JoyID, UniSat)
 - [ ] `git push` to IPFS via custom Git remote helper

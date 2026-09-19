@@ -9,7 +9,7 @@
 1. [Flow 1: First-Time User Onboarding](#flow-1-first-time-user-onboarding)
 2. [Flow 2: Browsing Code on Rivet](#flow-2-browsing-code-on-rivet)
 3. [Flow 3: Backing Up Repositories](#flow-3-backing-up-repositories)
-4. [Flow 4: Viewing Backup Proof](#flow-4-viewing-backup-rivet)
+4. [Flow 4: Viewing Backup Rivet](#flow-4-viewing-backup-rivet)
 5. [Flow 5: Minting Sovereign Passport](#flow-5-minting-sovereign-passport)
 6. [Flow 6: Restoring to New GitHub Account](#flow-6-restoring-to-new-github-account)
 7. [Flow 7: Public Profile Viewing (Visitor)](#flow-7-public-profile-viewing-visitor)
@@ -268,7 +268,7 @@
 
 ---
 
-## Flow 4: Viewing Backup Proof
+## Flow 4: Viewing Backup Rivet
 
 ### User Story
 > *As a developer, I want to see rivet that my code is anchored on CKB, with links to the blockchain explorer.*
@@ -393,7 +393,7 @@ STEP 8: User gets a shareable link: rivet.dev/jedi/passport
 │  "ckb1q...abc previously known as github.com/jedi,      │
 │   now github.com/new-jedi"                              │
 │                                                         │
-│  [View on GitHub] [View CKB Proof]                      │
+│  [View on GitHub] [View CKB Rivet]                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -417,7 +417,7 @@ STEP 8: User gets a shareable link: rivet.dev/jedi/passport
 │  │  47 repos • 3,241 commits • Since March 2019     │   │
 │  │  TypeScript, Rust, Python                         │   │
 │  │                                                   │   │
-│  │  🔐 On-Chain Proof:                               │   │
+│  │  🔐 On-Chain Rivet:                               │   │
 │  │  CKB Tx: 0xdef456... [View on Explorer ↗]        │   │
 │  │  Last verified: September 18, 2026               │   │
 │  └─────────────────────────────────────────────────┘   │

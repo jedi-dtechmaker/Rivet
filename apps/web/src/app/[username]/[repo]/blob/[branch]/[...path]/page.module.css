@@ -1,0 +1,115 @@
+.blob_page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  background: var(--color-bg-secondary);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+}
+
+.breadcrumb_link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.breadcrumb_link:hover {
+  color: var(--color-brand-primary);
+}
+
+.breadcrumb_sep {
+  color: var(--color-text-tertiary);
+}
+
+.current_path {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-bold);
+}
+
+.file_card {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+
+.file_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.file_info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.file_icon {
+  color: var(--color-text-tertiary);
+}
+
+.file_name {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-sm);
+}
+
+.file_meta {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.file_actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.code_container {
+  display: flex;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.code_gutter {
+  padding: var(--space-4) var(--space-2);
+  background: var(--color-bg-elevated);
+  border-right: 1px solid var(--color-border);
+  text-align: right;
+  user-select: none;
+}
+
+.line_number {
+  color: var(--color-text-tertiary);
+  padding: 0 var(--space-2);
+}
+
+.code_content {
+  margin: 0;
+  padding: var(--space-4);
+  color: #e2e8f0;
+  white-space: pre;
+  tab-size: 2;
+}
+
+@media (max-width: 640px) {
+  .file_header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
