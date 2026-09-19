@@ -23,7 +23,9 @@ export default function ProfileRepoListClient({ username, repos }: { username: s
                 <Github size={18} />
                 {repo.name}
                 {repo.isBackedUp && (
-                  <ShieldCheck size={16} color="var(--color-success)" title="Secured on CKB" style={{ marginLeft: '4px' }} />
+                  <span title="Secured on CKB" style={{ display: 'inline-flex' }}>
+                    <ShieldCheck size={16} color="var(--color-success)" style={{ marginLeft: '4px' }} />
+                  </span>
                 )}
               </div>
               {repo.isPrivate && (
