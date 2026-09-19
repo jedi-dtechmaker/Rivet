@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function fetchGitHubRepoData(fullName: string) {
+export async function fetchGitHubRepoData(fullName: string, subPath: string = '') {
   const session = await getServerSession(authOptions);
   if (!session || !session.accessToken) return null;
 
@@ -16,8 +16,11 @@ export async function fetchGitHubRepoData(fullName: string) {
     const commits = await commitRes.json();
     const latestCommit = commits[0];
 
-    // Fetch contents (root level)
-    const contentRes = await fetch(`https://api.github.com/repos/${fullName}/contents/`, { headers });
+    // Fetch contents
+    const contentUrl = subPath 
+      ? `https://api.github.com/repos/${fullName}/contents/${subPath}`
+      : `https://api.github.com/repos/${fullName}/contents/`;
+    const contentRes = await fetch(contentUrl, { headers });
     const contents = await contentRes.json();
 
     if (!Array.isArray(contents)) return { latestCommit, contents: [] };

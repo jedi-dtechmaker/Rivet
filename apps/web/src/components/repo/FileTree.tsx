@@ -19,9 +19,9 @@ function timeAgo(dateString: string) {
   return `${Math.floor(months / 12)} years ago`;
 }
 
-export async function FileTree({ basePath, cachedTree }: { basePath: string, cachedTree?: any }) {
+export async function FileTree({ basePath, cachedTree, subPath = '' }: { basePath: string, cachedTree?: any, subPath?: string }) {
   const repoFullName = basePath.slice(1); // remove leading slash
-  let githubData = await fetchGitHubRepoData(repoFullName);
+  let githubData = await fetchGitHubRepoData(repoFullName, subPath);
 
   // If live fetch fails but we have a cached tree in the DB, use it!
   if (!githubData && cachedTree) {
@@ -70,7 +70,7 @@ export async function FileTree({ basePath, cachedTree }: { basePath: string, cac
           <div key={file.path} className={styles.row}>
             <div className={styles.col_name}>
               {getIcon(file.name, file.type)}
-              <Link href={`/${repoFullName}/blob/main/${file.path}`} className={styles.link}>
+              <Link href={`/${repoFullName}/${file.type === 'dir' ? 'tree' : 'blob'}/main/${file.path}`} className={styles.link}>
                 {file.name}
               </Link>
             </div>

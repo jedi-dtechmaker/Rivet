@@ -1,0 +1,48 @@
+.tree_page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.breadcrumb_link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+  transition: color var(--transition-fast);
+}
+
+.breadcrumb_link:hover {
+  color: var(--color-text-primary);
+}
+
+.breadcrumb_sep {
+  color: var(--color-border);
+}
+
+.folder_icon {
+  color: var(--color-text-tertiary);
+}
+
+.current_path {
+  color: var(--color-text-primary);
+  font-family: monospace;
+  font-weight: var(--weight-semibold);
+}
+
+.tree_container {
+  /* Inherit FileTree styles without extra padding */
+}
