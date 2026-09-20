@@ -28,7 +28,16 @@ export default async function Dashboard() {
     next: { revalidate: 60 } // Cache for 60 seconds
   });
 
-  const githubRepos = await res.json();
+  let githubRepos: any[] = [];
+  let githubError: string | null = null;
+
+  if (res.ok) {
+    githubRepos = await res.json();
+  } else {
+    const errorData = await res.json();
+    githubError = errorData.message || 'Failed to fetch repositories from GitHub';
+    console.error("GitHub API Error:", errorData);
+  }
 
   // Fetch our database records to see which ones are backed up
   const dbRepos = await db.findAllRepos();
@@ -56,24 +65,27 @@ export default async function Dashboard() {
   }) : [];
 
   // Append any repositories that are backed up in our DB but were deleted on GitHub
-  dbRepos.forEach((dbRepo: any) => {
-    if (dbRepo.isBackedUp && !repos.find((r: any) => r.fullName === dbRepo.fullName)) {
-      repos.push({
-        id: dbRepo.id,
-        name: dbRepo.name,
-        fullName: dbRepo.fullName,
-        description: 'This repository has been deleted from GitHub but is safely backed up on IPFS and CKB.',
-        language: 'Unknown',
-        stars: 0,
-        commits: dbRepo.commitCount || '—',
-        isPrivate: dbRepo.isPrivate,
-        backupStatus: 'backed_up',
-        lastBackup: new Date(dbRepo.updatedAt).toLocaleDateString(),
-        lastUpdated: new Date(dbRepo.updatedAt).toLocaleDateString(),
-        deletedOnGithub: true
-      });
-    }
-  });
+  // ONLY do this if we successfully fetched from GitHub, otherwise we might falsely assume they are deleted!
+  if (!githubError) {
+    dbRepos.forEach((dbRepo: any) => {
+      if (dbRepo.isBackedUp && !repos.find((r: any) => r.fullName === dbRepo.fullName)) {
+        repos.push({
+          id: dbRepo.id,
+          name: dbRepo.name,
+          fullName: dbRepo.fullName,
+          description: 'This repository has been deleted from GitHub but is safely backed up on IPFS and CKB.',
+          language: 'Unknown',
+          stars: 0,
+          commits: dbRepo.commitCount || '—',
+          isPrivate: dbRepo.isPrivate,
+          backupStatus: 'backed_up',
+          lastBackup: new Date(dbRepo.updatedAt).toLocaleDateString(),
+          lastUpdated: new Date(dbRepo.updatedAt).toLocaleDateString(),
+          deletedOnGithub: true
+        });
+      }
+    });
+  }
   return (
     <div className={styles.dashboard}>
       {/* Dashboard Header & Stats */}
@@ -90,6 +102,16 @@ export default async function Dashboard() {
           </button>
         </div>
       </div>
+
+      {githubError && (
+        <div style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={20} />
+          <div>
+            <strong>GitHub API Error:</strong> {githubError}.<br/>
+            Your GitHub access token may have expired or you hit a rate limit. Please try signing out and signing back in to refresh it.
+          </div>
+        </div>
+      )}
 
       <RepoListClient repos={repos} />
     </div>
