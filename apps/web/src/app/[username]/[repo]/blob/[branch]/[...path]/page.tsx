@@ -19,21 +19,22 @@ export default async function BlobPage({
   let fileContent = 'Unable to load file content.';
   let fileSize = 0;
 
-  if (session && session.accessToken) {
-    try {
-      const res = await fetch(`https://api.github.com/repos/${fullName}/contents/${filePath}`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-          Accept: 'application/vnd.github.v3.raw',
-        },
-      });
-      if (res.ok) {
-        fileContent = await res.text();
-        fileSize = new Blob([fileContent]).size;
-      }
-    } catch (e) {
-      console.error(e);
+  try {
+    const headers: any = {
+      Accept: 'application/vnd.github.v3.raw',
+    };
+    if (session && session.accessToken) {
+      headers['Authorization'] = `Bearer ${session.accessToken}`;
     }
+
+    const res = await fetch(`https://api.github.com/repos/${fullName}/contents/${filePath}`, { headers });
+    
+    if (res.ok) {
+      fileContent = await res.text();
+      fileSize = new Blob([fileContent]).size;
+    }
+  } catch (e) {
+    console.error(e);
   }
 
   // Count lines for the gutter

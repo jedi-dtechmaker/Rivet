@@ -3,12 +3,14 @@ import { authOptions } from '@/lib/auth';
 
 export async function fetchGitHubRepoData(fullName: string, subPath: string = '') {
   const session = await getServerSession(authOptions);
-  if (!session || !session.accessToken) return null;
 
-  const headers = {
-    Authorization: `Bearer ${session.accessToken}`,
+  const headers: any = {
     Accept: 'application/vnd.github.v3+json',
   };
+  
+  if (session && session.accessToken) {
+    headers['Authorization'] = `Bearer ${session.accessToken}`;
+  }
 
   try {
     // Fetch latest commit for the whole repo
@@ -63,12 +65,14 @@ export async function fetchGitHubRepoData(fullName: string, subPath: string = ''
 
 export async function fetchGitHubCommits(fullName: string) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.accessToken) return null;
 
-  const headers = {
-    Authorization: `Bearer ${session.accessToken}`,
+  const headers: any = {
     Accept: 'application/vnd.github.v3+json',
   };
+
+  if (session && session.accessToken) {
+    headers['Authorization'] = `Bearer ${session.accessToken}`;
+  }
 
   try {
     const res = await fetch(`https://api.github.com/repos/${fullName}/commits?per_page=30`, { headers });
