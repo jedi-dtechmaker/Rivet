@@ -37,7 +37,18 @@ const {
   PINATA_JWT,
   TREASURY_PRIVATE_KEY,
   REPO_CLONE_TOKEN,
+  PREVIOUS_OUTPOINT,
 } = process.env;
+
+/** Parse an outpoint like "0x<64 hex>:<index>". Returns null if malformed. */
+function parseOutpoint(value) {
+  if (!value) return null;
+  const [txHash, indexStr] = String(value).split(':');
+  if (!/^0x[0-9a-fA-F]{64}$/.test(txHash ?? '')) return null;
+  const index = Number(indexStr);
+  if (!Number.isInteger(index) || index < 0) return null;
+  return { txHash, index };
+}
 
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -125,21 +136,75 @@ async function run() {
     // Address.fromString returns a Promise: await it BEFORE reading .script.
     const { script: lock } = await ccc.Address.fromString(addresses[0], client);
 
-    const tx = ccc.Transaction.from({
-      outputs: [{ lock, capacity: ccc.fixedPointFrom(93) }],
-      outputsData: [`0x${merkleRoot}`],
-    });
+    // Reuse the repository's existing anchor cell where possible: spend it and
+    // write the new root into a fresh cell (same lock, same capacity). That keeps
+    // on-chain growth at one cell per repo instead of one cell per backup, while
+    // preserving the simple "one tx = one proof" story.
+    const previous = parseOutpoint(PREVIOUS_OUTPOINT);
 
-    await tx.completeInputsByCapacity(signer);
-    await tx.completeFeeBy(signer, 1000);
-    const ckbTxHash = await signer.sendTransaction(tx);
-    console.log(`[worker] Anchored: ${ckbTxHash}`);
+    const anchor = async (reusePrevious) => {
+      const inputs = [];
+      let reusedCell = null;
+
+      if (reusePrevious && previous) {
+        const outPoint = ccc.OutPoint.from(previous);
+        const existing = await client.getCell(outPoint).catch(() => null);
+
+        if (existing) {
+          inputs.push(ccc.CellInput.from({ previousOutput: outPoint }));
+          reusedCell = existing;
+          console.log(`[worker] Reusing anchor cell ${PREVIOUS_OUTPOINT}`);
+        } else {
+          console.warn(
+            `[worker] Anchor cell ${PREVIOUS_OUTPOINT} not found; creating a new one`,
+          );
+        }
+      }
+
+      // Match the existing cell's capacity when reusing, so there is no leftover
+      // change beyond the fee.
+      const capacity = reusedCell ? reusedCell.cellOutput.capacity : ccc.fixedPointFrom(93);
+
+      const tx = ccc.Transaction.from({
+        inputs,
+        outputs: [{ lock, capacity }],
+        outputsData: [`0x${merkleRoot}`],
+      });
+
+      await tx.completeInputsByCapacity(signer);
+      await tx.completeFeeBy(signer, 1000);
+      const txHash = await signer.sendTransaction(tx);
+      return { txHash, reused: Boolean(reusedCell) };
+    };
+
+    let anchorResult;
+    try {
+      anchorResult = await anchor(true);
+    } catch (e) {
+      if (!previous) throw e;
+      // The stored outpoint can be stale: a racing backup may already have spent
+      // the cell, and the client can even serve a spent cell from its cache.
+      // Falling back to a fresh cell keeps the backup succeeding.
+      console.warn(
+        `[worker] Could not reuse the anchor cell (${e?.message ?? e}); retrying with a fresh cell`,
+      );
+      anchorResult = await anchor(false);
+    }
+
+    const ckbTxHash = anchorResult.txHash;
+    // The anchor is output 0 of this transaction.
+    const ckbCellOutpoint = `${ckbTxHash}:0`;
+    console.log(
+      `[worker] Anchored: ${ckbTxHash} (cell ${ckbCellOutpoint}, ${anchorResult.reused ? 'reused' : 'new'} cell)`,
+    );
 
     await report({
       success: true,
       merkleRoot: `0x${merkleRoot}`,
       ipfsCid,
       ckbTxHash,
+      ckbCellOutpoint,
+      reusedCell: anchorResult.reused,
       commitsProcessed: commitHashes.length,
     });
   } finally {

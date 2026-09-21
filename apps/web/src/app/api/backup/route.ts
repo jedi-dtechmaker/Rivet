@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { dispatchBackup, isValidRepoFullName } from '@/lib/backupDispatch';
 
 /**
@@ -21,9 +22,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid repoFullName' }, { status: 400 });
     }
 
+    // If this repo already has an anchor cell, hand its outpoint to the worker so
+    // it spends and rewrites that cell rather than creating a new one.
+    const existing = await db.findRepo(repoFullName);
+    const previousOutpoint = existing?.ckbCellOutpoint ?? undefined;
+
     // The user's OAuth token already has `repo` scope, so it can dispatch the
     // workflow on their own repository without a separate PAT.
-    const result = await dispatchBackup(repoFullName, session.accessToken);
+    const result = await dispatchBackup(
+      repoFullName,
+      session.accessToken,
+      previousOutpoint,
+    );
 
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: result.status });

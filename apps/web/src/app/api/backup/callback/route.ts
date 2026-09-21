@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       merkleRoot,
       ipfsCid,
       ckbTxHash,
+      ckbCellOutpoint,
       commitsProcessed,
       error,
     }: {
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
       merkleRoot?: string;
       ipfsCid?: string;
       ckbTxHash?: string;
+      ckbCellOutpoint?: string;
       commitsProcessed?: number;
       error?: string;
     } = body ?? {};
@@ -78,6 +80,7 @@ export async function POST(req: NextRequest) {
         isBackedUp: true,
         lastBackupCid: ipfsCid,
         ckbTxHash,
+        ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
         ...(typeof commitsProcessed === 'number' ? { commitCount: commitsProcessed } : {}),
       });
       console.log(`[backup/callback] Updated ${repoFullName} -> ${ckbTxHash}`);
@@ -98,6 +101,7 @@ export async function POST(req: NextRequest) {
         commitCount: commitsProcessed ?? 0,
         lastBackupCid: ipfsCid,
         ckbTxHash,
+        ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
         userId: user.id,
       });
       console.log(`[backup/callback] Created ${repoFullName} -> ${ckbTxHash}`);

@@ -21,19 +21,23 @@ model User {
 }
 
 model Repository {
-  id             String   @id @default(uuid())
-  githubRepoId   String   @unique
-  name           String
-  fullName       String
-  isBackedUp     Boolean  @default(false)
-  isPrivate      Boolean  @default(false)
-  commitCount    Int      @default(0)
-  cachedTree     Json?
-  cachedCommits  Json?
-  lastBackupCid  String?
-  ckbTxHash      String?
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  githubRepoId    String   @unique
+  name            String
+  fullName        String
+  isBackedUp      Boolean  @default(false)
+  isPrivate       Boolean  @default(false)
+  commitCount     Int      @default(0)
+  cachedTree      Json?
+  cachedCommits   Json?
+  lastBackupCid   String?
+  ckbTxHash       String?
+  // Outpoint ("0x<txHash>:<index>") of this repo's anchor cell. Reused and
+  // rewritten on every backup so on-chain growth is one cell per repo, not one
+  // cell per backup.
+  ckbCellOutpoint String?
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

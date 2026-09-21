@@ -85,7 +85,13 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[webhook] Dispatching backup worker for ${repoFullName} ...`);
-    const result = await dispatchBackup(repoFullName);
+    // Pass the anchor cell outpoint so auto-sync reuses the repo's existing cell
+    // instead of creating a new one on every push.
+    const result = await dispatchBackup(
+      repoFullName,
+      undefined,
+      existingRepo?.ckbCellOutpoint ?? undefined,
+    );
 
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: result.status });

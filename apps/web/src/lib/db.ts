@@ -119,6 +119,7 @@ export const db = {
     cachedCommits?: any;
     lastBackupCid: string;
     ckbTxHash: string;
+    ckbCellOutpoint?: string;
     userId: string;
   }) {
     return prisma.repository.create({
@@ -141,6 +142,7 @@ export const db = {
     cachedCommits?: any;
     lastBackupCid: string;
     ckbTxHash: string;
+    ckbCellOutpoint?: string;
   }) {
     return prisma.repository.update({
       where: { githubRepoId },

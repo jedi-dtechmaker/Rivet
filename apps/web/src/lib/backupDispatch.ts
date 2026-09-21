@@ -125,10 +125,15 @@ export async function dispatchWorkflow(opts: {
   }
 }
 
-/** Start a backup job. */
+/**
+ * Start a backup job.
+ * `previousOutpoint` is the repo's existing anchor cell ("0x<tx>:<index>"),
+ * which the worker spends and rewrites instead of creating a new cell.
+ */
 export async function dispatchBackup(
   repoFullName: string,
   sessionToken?: string,
+  previousOutpoint?: string | null,
 ): Promise<DispatchResult> {
   const appUrl = resolveAppUrl();
   if (!appUrl) {
@@ -141,6 +146,7 @@ export async function dispatchBackup(
     inputs: {
       repoFullName,
       callbackUrl: `${appUrl.replace(/\/$/, '')}/api/backup/callback`,
+      previousOutpoint: previousOutpoint ?? '',
     },
     // A dedicated token is preferred (the webhook path has no user session);
     // otherwise reuse the signed-in user's OAuth token, which carries repo scope.

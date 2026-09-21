@@ -20,6 +20,10 @@ on:
         description: 'Absolute URL to POST the result to'
         required: true
         type: string
+      previousOutpoint:
+        description: 'Existing anchor cell to reuse, as 0x<txHash>:<index>. Empty creates a new cell.'
+        required: false
+        type: string
 
 concurrency:
   group: backup-${{ github.event.inputs.jobId }}
@@ -53,6 +57,7 @@ jobs:
           REPO_FULL_NAME: ${{ inputs.repoFullName }}
           JOB_ID: ${{ inputs.jobId }}
           CALLBACK_URL: ${{ inputs.callbackUrl }}
+          PREVIOUS_OUTPOINT: ${{ inputs.previousOutpoint }}
           CALLBACK_SECRET: ${{ secrets.BACKUP_CALLBACK_SECRET || secrets.NEXTAUTH_SECRET }}
           PINATA_JWT: ${{ secrets.PINATA_JWT }}
           TREASURY_PRIVATE_KEY: ${{ secrets.TREASURY_PRIVATE_KEY }}
