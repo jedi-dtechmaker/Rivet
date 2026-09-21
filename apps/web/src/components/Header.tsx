@@ -105,30 +105,15 @@ export function Header() {
         </div>
 
         <div className={styles.header__right}>
-          {isWalletConnected && (
-            <div
-              className={`${styles['header__github-status']} ${
-                isGithubLinked
-                  ? styles['header__github-status--connected']
-                  : styles['header__github-status--disconnected']
-              }`}
-              title={isGithubLinked ? 'GitHub Connected' : 'Link your GitHub account'}
-              onClick={() => {
-                if (!isGithubLinked) signIn('github');
-              }}
-              style={{ cursor: isGithubLinked ? 'default' : 'pointer' }}
+          {!isGithubLinked ? (
+            <button
+              className={styles['header__connect-btn']}
+              onClick={() => signIn('github')}
             >
-              <span className={styles['header__github-dot']} />
-              <Github size={12} />
-              <span>
-                {isGithubLinked 
-                  ? `@${session?.user?.name || session?.user?.email?.split('@')[0] || 'linked'}` 
-                  : 'Link GitHub'}
-              </span>
-            </div>
-          )}
-
-          {isWalletConnected ? (
+              <Github size={16} style={{ marginRight: '8px' }} />
+              Sign in with GitHub
+            </button>
+          ) : (
             <div className={styles.user_dropdown_container} ref={dropdownRef}>
               <button 
                 className={styles.header__user} 
@@ -144,11 +129,11 @@ export function Header() {
                       style={{ width: '100%', height: '100%', borderRadius: '50%' }} 
                     />
                   ) : (
-                    (wallet as any)?.address?.[0]?.toUpperCase() || 'U'
+                    <Github size={16} />
                   )}
                 </div>
                 <span className={styles.header__username} style={{ display: 'none' }}>
-                  {truncateAddress(address)}
+                  {session?.user?.name || session?.user?.email?.split('@')[0]}
                 </span>
               </button>
 
@@ -156,12 +141,10 @@ export function Header() {
                 <div className={styles.user_dropdown}>
                   <div className={styles.dropdown_header}>
                     <div className={styles.wallet_info}>
-                      <span className={styles.wallet_label}>CKB Wallet</span>
-                      <span className={styles.wallet_address}>{truncateAddress(address)}</span>
-                    </div>
-                    <div className={styles.dropdown_status}>
-                      <span className={styles.status_dot}></span>
-                      Wallet Active
+                      <span className={styles.wallet_label}>GitHub Account</span>
+                      <span className={styles.wallet_address}>
+                        @{session?.user?.name || session?.user?.email?.split('@')[0]}
+                      </span>
                     </div>
                   </div>
 
@@ -169,42 +152,46 @@ export function Header() {
                     <User size={14} /> Dashboard
                   </Link>
 
-                  {isGithubLinked && (
-                    <a 
-                      href={`https://github.com/${session?.user?.name || ''}`} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className={styles.dropdown_item}
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <Github size={14} /> GitHub Profile <ExternalLink size={12} style={{ marginLeft: 'auto', opacity: 0.5 }} />
-                    </a>
-                  )}
+                  <a 
+                    href={`https://github.com/${session?.user?.name || ''}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className={styles.dropdown_item}
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <Github size={14} /> GitHub Profile <ExternalLink size={12} style={{ marginLeft: 'auto', opacity: 0.5 }} />
+                  </a>
 
                   <Link href="/settings" className={styles.dropdown_item} onClick={() => setIsDropdownOpen(false)}>
                     <Settings size={14} /> Settings
                   </Link>
+
+                  {/* Web3 Upgrade Flow */}
+                  <div style={{ borderTop: '1px solid var(--color-border)', margin: '4px 0' }}></div>
                   
-                  {isGithubLinked && (
-                    <button onClick={handleGithubDisconnect} className={`${styles.dropdown_item} ${styles['dropdown_item--danger']}`}>
-                      <Github size={14} /> Unlink GitHub
+                  {!isWalletConnected ? (
+                    <button onClick={open} className={styles.dropdown_item} style={{ color: 'var(--color-primary)' }}>
+                      <Shield size={14} /> Upgrade to Web3 (CoTA)
                     </button>
+                  ) : (
+                    <>
+                      <div className={styles.dropdown_item} style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                        Wallet: {truncateAddress(address)}
+                      </div>
+                      <button onClick={handleWalletDisconnect} className={`${styles.dropdown_item} ${styles['dropdown_item--danger']}`}>
+                        <LogOut size={14} /> Disconnect Wallet
+                      </button>
+                    </>
                   )}
                   
-                  <button onClick={handleWalletDisconnect} className={`${styles.dropdown_item} ${styles['dropdown_item--danger']}`}>
-                    <LogOut size={14} /> Disconnect Wallet
+                  <div style={{ borderTop: '1px solid var(--color-border)', margin: '4px 0' }}></div>
+
+                  <button onClick={handleGithubDisconnect} className={`${styles.dropdown_item} ${styles['dropdown_item--danger']}`}>
+                    <LogOut size={14} /> Sign Out
                   </button>
                 </div>
               )}
             </div>
-          ) : (
-            <button
-              className={styles['header__connect-btn']}
-              id="connect-wallet-btn"
-              onClick={open}
-            >
-              Connect Wallet
-            </button>
           )}
         </div>
       </div>

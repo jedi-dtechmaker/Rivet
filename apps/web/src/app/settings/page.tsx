@@ -37,7 +37,7 @@ export default async function SettingsPage() {
 
       <div className={styles.card}>
         <form action={saveSettings} className={styles.form}>
-          <input type="hidden" name="ckbAddress" value={user.ckbAddress} />
+          <input type="hidden" name="ckbAddress" value={user.ckbAddress ?? ''} />
           
           <div className={styles.form_group}>
             <div className={styles.form_label_row} style={{ alignItems: 'flex-start' }}>

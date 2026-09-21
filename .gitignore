@@ -23,6 +23,13 @@ yarn-error.log*
 .env
 .env.*.local
 
+# secrets / throwaway local scripts (never commit private keys)
+get_address.js
+**/get_address.js
+apps/web/scripts/*.js
+*.secret.*
+*.local.js
+
 # vercel/netlify
 .vercel
 .netlify

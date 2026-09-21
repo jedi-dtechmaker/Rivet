@@ -13,6 +13,10 @@ export default function CopyAddressClient({ address }: { address: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (!address) {
+    return null;
+  }
+
   const truncated = `${address.slice(0, 10)}...${address.slice(-8)}`;
 
   return (

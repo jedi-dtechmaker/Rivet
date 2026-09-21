@@ -66,7 +66,7 @@ export default async function PublicProfilePage({ params }: { params: { username
               </span>
             )}
           </h1>
-          <CopyAddressClient address={user.ckbAddress} />
+          <CopyAddressClient address={user.ckbAddress ?? ''} />
           
           {user.bio && (
             <p style={{ marginTop: '8px', color: 'var(--color-text-secondary)', fontSize: '0.9rem', lineHeight: 1.5, maxWidth: '600px' }}>

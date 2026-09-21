@@ -1,71 +1,77 @@
 'use client';
 
 import { useState } from 'react';
-import { ccc } from '@ckb-ccc/connector-react';
-import { anchorBackupOnChain } from '@/lib/ckb';
-import { RefreshCw, ShieldCheck, XCircle, X, AlertTriangle } from 'lucide-react';
+import { RefreshCw, ShieldCheck, X, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName: string, isPrivate?: boolean }) {
-  const [status, setStatus] = useState<'idle' | 'backing_up' | 'signing' | 'backed_up'>('idle');
+  const [status, setStatus] = useState<'idle' | 'backing_up' | 'backed_up'>('idle');
+  const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const signer = ccc.useSigner();
 
   const router = useRouter();
   
   const handleBackup = async () => {
-    if (!signer) {
-      setErrorMsg("Please connect your CCC wallet first.");
-      return;
-    }
-
     try {
       setStatus('backing_up');
+      setProgress(0);
+      setStatusText('Connecting...');
       
-      // 1. Call our Next.js API route to clone, merkle, and upload to Pinata
       const res = await fetch('/api/backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoFullName })
+        body: JSON.stringify({ repoFullName, isPrivate })
       });
       
-      const data = await res.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || "Failed to backup repository");
+      if (!res.ok && !res.body) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to start backup process");
       }
 
-      setStatus('signing');
+      if (!res.body) throw new Error("No response stream available");
 
-      // 2. Prompt the user to sign the CKB transaction with the proofs
-      const hash = await anchorBackupOnChain(signer, data.merkleRoot, data.ipfsCid, repoFullName);
-      setTxHash(hash);
-      
-      // 3. Save the proofs to our Prisma database
-      const ckbAddress = await signer.getRecommendedAddress();
-      const updateRes = await fetch('/api/repo/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          repoFullName, 
-          ckbTxHash: hash, 
-          ipfsCid: data.ipfsCid,
-          ckbAddress,
-          isPrivate,
-          commitCount: data.commitsProcessed,
-          cachedTree: data.cachedTree,
-          cachedCommits: data.cachedCommits
-        })
-      });
-      
-      if (!updateRes.ok) {
-        const errData = await updateRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to save backup record to database");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          try {
+            const data = JSON.parse(line);
+            
+            if (data.msg) setStatusText(data.msg);
+            if (data.progress !== undefined) setProgress(data.progress);
+            
+            if (data.success === true) {
+              setTxHash(data.ckbTxHash);
+              setStatus('backed_up');
+              router.refresh();
+              return; // Exit processing on success
+            } else if (data.success === false) {
+              throw new Error(data.error || "An error occurred during backup");
+            }
+          } catch (e: any) {
+            // Ignore JSON parse errors for incomplete chunks (handled by buffer)
+            // But re-throw application errors
+            if (e.message !== "Unexpected end of JSON input" && !e.message.includes("JSON")) {
+               throw e;
+            }
+          }
+        }
       }
-      
-      setStatus('backed_up');
-      router.refresh();
     } catch (e: any) {
       console.error(e);
       setErrorMsg(e.message || "An unexpected error occurred during the backup process.");
@@ -86,11 +92,26 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
     );
   }
 
-  if (status === 'backing_up' || status === 'signing') {
+  if (status === 'backing_up') {
     return (
-      <span className="badge badge--info" style={{ padding: '4px 8px' }}>
-        <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> {status === 'backing_up' ? 'Mirroring to IPFS...' : 'Sign Wallet Tx...'}
-      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '150px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--color-text-dim)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+            <RefreshCw size={10} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} /> 
+            {statusText || 'Initializing...'}
+          </span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{progress}%</span>
+        </div>
+        <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--color-border)', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ 
+            height: '100%', 
+            width: `${progress}%`, 
+            backgroundColor: 'var(--color-primary)', 
+            transition: 'width 0.3s ease',
+            boxShadow: '0 0 8px var(--color-primary)'
+          }} />
+        </div>
+      </div>
     );
   }
 

@@ -9,9 +9,9 @@ datasource db {
 
 model User {
   id              String       @id @default(uuid())
-  ckbAddress      String       @unique
-  githubId        String?      @unique
+  githubId        String       @unique
   githubUsername  String?
+  ckbAddress      String?      @unique
   bio             String?
   isProfilePublic Boolean      @default(true)
   autoSync        Boolean      @default(false)

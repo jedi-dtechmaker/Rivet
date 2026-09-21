@@ -4,8 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Search, Filter, ShieldCheck, Database, RefreshCw, FolderGit2, Star, Clock, AlertCircle } from 'lucide-react';
 import { BackupButton } from '@/components/BackupButton';
-import { WalletRepos } from './WalletRepos';
 import { SyncButtonClient } from './SyncButtonClient';
+import { AutoSyncToggle } from '@/components/AutoSyncToggle';
 import { db } from '@/lib/db';
 import type { Repository } from '@prisma/client';
 import styles from './page.module.css';
@@ -14,7 +14,14 @@ export default async function Dashboard() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    return <WalletRepos />;
+    return (
+      <div className={styles.dashboard} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <AlertCircle size={48} style={{ color: 'var(--color-primary)', marginBottom: '1rem' }} />
+        <h2 style={{ marginBottom: '1rem' }}>GitHub Not Connected</h2>
+        <p style={{ color: 'var(--color-text-dim)', marginBottom: '2rem' }}>You must sign in with your GitHub account to manage your repositories.</p>
+        <Link href="/api/auth/signin" className="btn btn--primary">Sign in with GitHub</Link>
+      </div>
+    );
   }
 
   // Fetch real repositories from GitHub API
@@ -40,7 +47,11 @@ export default async function Dashboard() {
   }
 
   // Fetch our database records to see which ones are backed up
-  const dbRepos = await db.findAllRepos();
+  // @ts-ignore
+  const userId = session.user?.id;
+  const dbUser = userId ? await db.findUserByGithubId(userId) : null;
+  const dbRepos = dbUser ? await db.findReposByUserId(dbUser.id) : [];
+  
   const dbRepoMap = new Map<string, Repository>(
     dbRepos.map((r: Repository) => [r.fullName, r] as [string, Repository])
   );
@@ -96,6 +107,7 @@ export default async function Dashboard() {
         </div>
 
         <div className={styles.actions}>
+          {dbUser && <AutoSyncToggle initialAutoSync={dbUser.autoSync} />}
           <SyncButtonClient />
           <button className="btn btn--primary">
             <Database size={16} /> Backup All

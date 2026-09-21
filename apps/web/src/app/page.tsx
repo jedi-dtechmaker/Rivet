@@ -3,18 +3,18 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Github, Lock, History, Database, ShieldCheck, Shield, ChevronRight } from 'lucide-react';
-import { ccc } from '@ckb-ccc/connector-react';
+import { signIn, useSession } from 'next-auth/react';
 import styles from './page.module.css';
 
 export default function Home() {
-  const { open, wallet } = ccc.useCcc();
+  const { data: session } = useSession();
   const router = useRouter();
 
   const handleConnect = () => {
-    if (wallet) {
+    if (session) {
       router.push('/dashboard');
     } else {
-      open();
+      signIn('github');
     }
   };
 
@@ -27,7 +27,7 @@ export default function Home() {
 
         <div className={styles.hero__badge}>
           <span className={styles['hero__badge-dot']}></span>
-          Powered by Nervos CKB & RGB++
+          Powered by Nervos CKB & CoTA
         </div>
 
         <h1 className={styles.hero__title}>
@@ -41,7 +41,7 @@ export default function Home() {
 
         <div className={styles.hero__cta}>
           <button onClick={handleConnect} className={styles['hero__cta-primary']}>
-            {wallet ? 'Go to Dashboard' : 'Connect Wallet'} <ArrowRight size={18} />
+            {session ? 'Go to Dashboard' : 'Sign in with GitHub'} <ArrowRight size={18} />
           </button>
           <a href="#how-it-works" className={styles['hero__cta-secondary']}>
             How it works
@@ -160,9 +160,9 @@ export default function Home() {
           <div className={styles.step}>
             <div className={`${styles.step__number} ${styles['step__number--1']}`}>1</div>
             <div className={styles.step__content}>
-              <h3 className={styles.step__title}>Connect Wallet & Link GitHub</h3>
+              <h3 className={styles.step__title}>Sign In with GitHub</h3>
               <p className={styles.step__description}>
-                Log in with MetaMask, JoyID, or UniSat. Your wallet is your identity. Link your GitHub account to import your repositories.
+                Log in instantly with your GitHub account. No crypto wallet or seed phrases required to get started. We handle the Web3 complexity in the background.
               </p>
             </div>
           </div>
@@ -183,7 +183,7 @@ export default function Home() {
             <div className={styles.step__content}>
               <h3 className={styles.step__title}>Anchor Proof on Blockchain</h3>
               <p className={styles.step__description}>
-                We compute a Merkle tree of your commit history and anchor the root to a CKB Cell. This creates an unforgeable timestamp of your work.
+                We silently generate a CoTA cell and anchor the Merkle root of your commit history to the CKB blockchain, creating an unforgeable timeline of your work.
               </p>
               <div className={`${styles.step__tag} ${styles['step__tag--ckb']}`}>Nervos CKB</div>
             </div>
@@ -206,7 +206,7 @@ export default function Home() {
         <div className={styles.cta__card}>
           <h2 className={styles.cta__title}>Ready to secure your code?</h2>
           <p className={styles.cta__description}>
-            Join the developers who own their history. Connect your wallet to get started.
+            Join the developers who own their history. Sign in with GitHub to get started.
           </p>
           <div className={styles.cta__buttons}>
             <button onClick={handleConnect} className={styles['hero__cta-primary']}>

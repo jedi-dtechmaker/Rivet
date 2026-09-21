@@ -60,16 +60,7 @@ export const db = {
    */
   async findUserByUsername(username: string) {
     return prisma.user.findFirst({
-      where: {
-        repositories: {
-          some: {
-            fullName: {
-              startsWith: `${username}/`,
-              mode: 'insensitive'
-            }
-          }
-        }
-      },
+      where: { githubUsername: username },
       include: {
         repositories: {
           orderBy: { updatedAt: 'desc' }
@@ -79,19 +70,38 @@ export const db = {
   },
 
   /**
+   * Find a user by their githubId
+   */
+  async findUserByGithubId(githubId: string) {
+    return prisma.user.findUnique({
+      where: { githubId }
+    });
+  },
+
+  /**
    * Create a user
    */
-  async createUser(data: { ckbAddress: string; githubId?: string; githubUsername?: string }) {
+  async createUser(data: { githubId: string; githubUsername?: string; ckbAddress?: string }) {
     return prisma.user.create({ data });
   },
 
   /**
    * Update user settings
    */
-  async updateUserSettings(ckbAddress: string, data: { isProfilePublic?: boolean; autoSync?: boolean; bio?: string }) {
+  async updateUserSettings(githubId: string, data: { isProfilePublic?: boolean; autoSync?: boolean; bio?: string; ckbAddress?: string }) {
     return prisma.user.update({
-      where: { ckbAddress },
+      where: { githubId },
       data,
+    });
+  },
+
+  /**
+   * Find repositories by User ID (the UUID, not githubId)
+   */
+  async findReposByUserId(userId: string) {
+    return prisma.repository.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' }
     });
   },
 
