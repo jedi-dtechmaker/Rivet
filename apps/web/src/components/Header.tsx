@@ -22,25 +22,34 @@ export function Header() {
 
   useEffect(() => {
     async function syncWallet() {
-      if (signer) {
-        try {
-          const addr = await signer.getRecommendedAddress();
-          setAddress(addr);
-          // Automatically fix the demo DB address if needed
-          fetch('/api/user/sync-wallet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ckbAddress: addr })
-          }).catch(console.error);
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
+      if (!signer) {
         setAddress('');
+        return;
+      }
+
+      try {
+        const addr = await signer.getRecommendedAddress();
+        setAddress(addr);
+
+        // Linking a wallet only makes sense against a signed-in Github account.
+        if (!session) return;
+
+        const res = await fetch('/api/user/sync-wallet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ckbAddress: addr }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          console.error('[wallet] Could not link wallet:', data.error || res.status);
+        }
+      } catch (e) {
+        console.error(e);
       }
     }
     syncWallet();
-  }, [signer]);
+  }, [signer, session]);
 
   const isWalletConnected = !!wallet;
   const isGithubLinked = !!session;
@@ -59,9 +68,17 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleWalletDisconnect = () => {
+  const handleWalletDisconnect = async () => {
     disconnect();
     setIsDropdownOpen(false);
+    // Clear the server-side link so the account is not left pointing at a wallet
+    // the user no longer controls.
+    try {
+      await fetch('/api/user/sync-wallet', { method: 'DELETE' });
+    } catch (e) {
+      console.error(e);
+    }
+    setAddress('');
   };
 
   const handleGithubDisconnect = () => {
@@ -171,12 +188,15 @@ export function Header() {
                   
                   {!isWalletConnected ? (
                     <button onClick={open} className={styles.dropdown_item} style={{ color: 'var(--color-primary)' }}>
-                      <Shield size={14} /> Upgrade to Web3 (CoTA)
+                      <Shield size={14} /> Connect CKB Wallet
                     </button>
                   ) : (
                     <>
                       <div className={styles.dropdown_item} style={{ fontSize: '0.8rem', opacity: 0.7 }}>
                         Wallet: {truncateAddress(address)}
+                      </div>
+                      <div className={styles.dropdown_item} style={{ fontSize: '0.72rem', opacity: 0.55, lineHeight: 1.4, whiteSpace: 'normal' }}>
+                        Optional — backups work without a wallet, and Rivet sponsors the CKB anchor fees.
                       </div>
                       <button onClick={handleWalletDisconnect} className={`${styles.dropdown_item} ${styles['dropdown_item--danger']}`}>
                         <LogOut size={14} /> Disconnect Wallet

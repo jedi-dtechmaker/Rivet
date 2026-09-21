@@ -103,7 +103,9 @@ export default async function Dashboard() {
       <div className={styles.header}>
         <div className={styles.header__content}>
           <h1 className={styles.title}>Dashboard</h1>
-          <p className={styles.subtitle}>Manage your repositories and backups</p>
+          <p className={styles.subtitle}>
+            Manage your repositories and backups — CKB anchor fees are sponsored by Rivet
+          </p>
         </div>
 
         <div className={styles.actions}>
