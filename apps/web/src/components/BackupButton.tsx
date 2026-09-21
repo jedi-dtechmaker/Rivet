@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { RefreshCw, ShieldCheck, X, AlertTriangle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { RefreshCw, ShieldCheck, X, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+const POLL_INTERVAL_MS = 5000;
+const MAX_WAIT_MS = 15 * 60 * 1000;
 
 export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName: string, isPrivate?: boolean }) {
   const [status, setStatus] = useState<'idle' | 'backing_up' | 'backed_up'>('idle');
@@ -10,71 +13,97 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
   const [statusText, setStatusText] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [runUrl, setRunUrl] = useState<string | null>(null);
 
   const router = useRouter();
-  
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true;
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
   const handleBackup = async () => {
+    cancelledRef.current = false;
+    stopPolling();
+
     try {
       setStatus('backing_up');
-      setProgress(0);
-      setStatusText('Connecting...');
-      
+      setProgress(5);
+      setStatusText('Queueing backup worker...');
+      setErrorMsg(null);
+
+      // 1. Dispatch the GitHub Actions worker. Returns immediately (202).
       const res = await fetch('/api/backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoFullName, isPrivate })
+        body: JSON.stringify({ repoFullName, isPrivate }),
       });
-      
-      if (!res.ok && !res.body) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to start backup process");
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start backup');
       }
 
-      if (!res.body) throw new Error("No response stream available");
+      const since = data.startedAt || new Date().toISOString();
+      if (data.runUrl) setRunUrl(data.runUrl);
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      setStatusText('Running on GitHub Actions...');
+      setProgress(15);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      // 2. Poll until the worker reports back through /api/backup/callback.
+      const startedAt = Date.now();
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        
-        // Keep the last incomplete line in the buffer
-        buffer = lines.pop() || '';
+      pollRef.current = setInterval(async () => {
+        if (cancelledRef.current) return;
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          
-          try {
-            const data = JSON.parse(line);
-            
-            if (data.msg) setStatusText(data.msg);
-            if (data.progress !== undefined) setProgress(data.progress);
-            
-            if (data.success === true) {
-              setTxHash(data.ckbTxHash);
-              setStatus('backed_up');
-              router.refresh();
-              return; // Exit processing on success
-            } else if (data.success === false) {
-              throw new Error(data.error || "An error occurred during backup");
-            }
-          } catch (e: any) {
-            // Ignore JSON parse errors for incomplete chunks (handled by buffer)
-            // But re-throw application errors
-            if (e.message !== "Unexpected end of JSON input" && !e.message.includes("JSON")) {
-               throw e;
-            }
+        try {
+          const s = await fetch(
+            `/api/backup/status?repoFullName=${encodeURIComponent(repoFullName)}&since=${encodeURIComponent(since)}`,
+            { cache: 'no-store' },
+          );
+          const sd = await s.json().catch(() => ({}));
+
+          if (sd.status === 'done') {
+            stopPolling();
+            setProgress(100);
+            setStatusText('Anchored');
+            setTxHash(sd.ckbTxHash ?? null);
+            setStatus('backed_up');
+            router.refresh();
+            return;
           }
+
+          if (Date.now() - startedAt > MAX_WAIT_MS) {
+            stopPolling();
+            setStatus('idle');
+            setErrorMsg(
+              'The backup is still running on GitHub Actions. Open the workflow run to check its progress.',
+            );
+            return;
+          }
+
+          // The job is remote, so progress is indicative rather than exact.
+          setProgress((p) => (p < 85 ? p + 5 : 85));
+          setStatusText('Backing up on GitHub Actions...');
+        } catch {
+          // Transient network error: keep polling.
         }
-      }
+      }, POLL_INTERVAL_MS);
     } catch (e: any) {
+      stopPolling();
       console.error(e);
-      setErrorMsg(e.message || "An unexpected error occurred during the backup process.");
+      setErrorMsg(e.message || 'An unexpected error occurred during the backup process.');
       setStatus('idle');
     }
   };
@@ -85,9 +114,16 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
         <span className="badge badge--success" style={{ padding: '4px 8px' }}>
           <ShieldCheck size={12} /> Anchored
         </span>
-        <a href={`https://pudge.explorer.nervos.org/transaction/${txHash}`} target="_blank" rel="noreferrer" style={{ fontSize: '10px', color: 'var(--color-primary)' }}>
-          View TX
-        </a>
+        {txHash && (
+          <a
+            href={`https://pudge.explorer.nervos.org/transaction/${txHash}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: '10px', color: 'var(--color-primary)' }}
+          >
+            View TX
+          </a>
+        )}
       </div>
     );
   }
@@ -97,16 +133,16 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '150px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--color-text-dim)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
-            <RefreshCw size={10} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} /> 
+            <RefreshCw size={10} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
             {statusText || 'Initializing...'}
           </span>
           <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{progress}%</span>
         </div>
         <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--color-border)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ 
-            height: '100%', 
-            width: `${progress}%`, 
-            backgroundColor: 'var(--color-primary)', 
+          <div style={{
+            height: '100%',
+            width: `${progress}%`,
+            backgroundColor: 'var(--color-primary)',
             transition: 'width 0.3s ease',
             boxShadow: '0 0 8px var(--color-primary)'
           }} />
@@ -117,9 +153,9 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
 
   return (
     <>
-      <button 
-        onClick={handleBackup} 
-        className="btn btn--secondary" 
+      <button
+        onClick={handleBackup}
+        className="btn btn--secondary"
         style={{ padding: '4px 12px', fontSize: '12px' }}
       >
         Backup Now
@@ -137,7 +173,7 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
             borderRadius: '16px', padding: '24px', width: '90%', maxWidth: '400px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative'
           }}>
-            <button 
+            <button
               onClick={() => setErrorMsg(null)}
               style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--color-text-dim)', cursor: 'pointer' }}
             >
@@ -150,7 +186,17 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
             <p style={{ color: 'var(--color-text-dim)', lineHeight: 1.5, margin: 0, marginBottom: '24px' }}>
               {errorMsg}
             </p>
-            <button 
+            {runUrl && (
+              <a
+                href={runUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-primary)', marginBottom: '16px' }}
+              >
+                <ExternalLink size={12} /> View workflow run
+              </a>
+            )}
+            <button
               onClick={() => setErrorMsg(null)}
               className="btn btn--primary" style={{ width: '100%', justifyContent: 'center' }}
             >

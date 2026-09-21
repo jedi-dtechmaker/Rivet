@@ -1,0 +1,60 @@
+name: Repo Backup Worker
+
+# Runs the git-heavy backup pipeline (mirror clone -> merkle root -> bundle -> IPFS -> CKB anchor)
+# because Vercel serverless functions have no `git` binary and a 10-60s timeout.
+#
+# Triggered by apps/web/src/app/api/backup/route.ts via the workflow_dispatch API.
+
+on:
+  workflow_dispatch:
+    inputs:
+      repoFullName:
+        description: 'Repository to back up, as owner/repo'
+        required: true
+        type: string
+      jobId:
+        description: 'Job identifier, echoed back on the callback'
+        required: true
+        type: string
+      callbackUrl:
+        description: 'Absolute URL to POST the result to'
+        required: true
+        type: string
+
+concurrency:
+  group: backup-${{ github.event.inputs.jobId }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout PROOF
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run backup worker
+        working-directory: apps/web
+        env:
+          REPO_FULL_NAME: ${{ inputs.repoFullName }}
+          JOB_ID: ${{ inputs.jobId }}
+          CALLBACK_URL: ${{ inputs.callbackUrl }}
+          CALLBACK_SECRET: ${{ secrets.BACKUP_CALLBACK_SECRET || secrets.NEXTAUTH_SECRET }}
+          PINATA_JWT: ${{ secrets.PINATA_JWT }}
+          TREASURY_PRIVATE_KEY: ${{ secrets.TREASURY_PRIVATE_KEY }}
+          REPO_CLONE_TOKEN: ${{ secrets.REPO_CLONE_TOKEN }}
+        run: node scripts/backup-worker.mjs
