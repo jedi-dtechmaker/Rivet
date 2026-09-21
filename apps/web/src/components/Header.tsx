@@ -159,8 +159,8 @@ export function Header() {
               className={styles['header__connect-btn']}
               onClick={() => signIn('github')}
             >
-              <Github size={16} style={{ marginRight: '8px' }} />
-              Sign in with GitHub
+              <Github size={16} />
+              <span className={styles['header__connect-btn-text']}>Sign In</span>
             </button>
           ) : (
             <div className={styles.user_dropdown_container} ref={dropdownRef}>

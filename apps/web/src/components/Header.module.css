@@ -141,6 +141,9 @@
 }
 
 .header__connect-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-lg);
   font-size: var(--text-sm);
@@ -156,6 +159,10 @@
 .header__connect-btn:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-glow-strong);
+}
+
+.header__connect-btn-text {
+  white-space: nowrap;
 }
 
 .header__user {
@@ -225,6 +232,15 @@
 
   .header__github-status span {
     display: none;
+  }
+
+  .header__connect-btn-text {
+    display: none;
+  }
+
+  .header__connect-btn {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-full);
   }
 }
 
