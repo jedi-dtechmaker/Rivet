@@ -5,14 +5,14 @@ import styles from './page.module.css';
 const trendingRepos = [
   { id: 1, name: 'bitcoin-core', owner: 'satoshi', desc: 'Bitcoin Core integration and backups.', stars: 1204, lang: 'C++' },
   { id: 2, name: 'ckb-sdk-js', owner: 'nervosnetwork', desc: 'JavaScript SDK for CKB.', stars: 850, lang: 'TypeScript' },
-  { id: 3, name: 'proof-contracts', owner: 'jedi', desc: 'Smart contracts for the PROOF protocol.', stars: 342, lang: 'Rust' },
+  { id: 3, name: 'rivet-contracts', owner: 'jedi', desc: 'Smart contracts for the Rivet protocol.', stars: 342, lang: 'Rust' },
 ];
 
 export default function ExplorePage() {
   return (
     <div className={styles.explore_page}>
       <div className={styles.header}>
-        <h1 className={styles.title}><Compass size={32} /> Explore PROOF</h1>
+        <h1 className={styles.title}><Compass size={32} /> Explore Rivet</h1>
         <p className={styles.subtitle}>Discover publicly verified and anchored repositories across the network.</p>
         
         <div className={styles.search_bar}>

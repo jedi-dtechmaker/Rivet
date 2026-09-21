@@ -1,0 +1,55 @@
+name: Repo Restore Worker
+
+# Restores a repository from its IPFS bundle back onto GitHub.
+# Runs on Actions because restore needs `git`, a writable disk and more than the
+# 10-60s budget a Vercel serverless function gets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      repoName:
+        description: 'Original repository name (used for the description)'
+        required: true
+        type: string
+      ipfsCid:
+        description: 'IPFS CID of the git bundle to restore'
+        required: true
+        type: string
+      targetRepoName:
+        description: 'Name of the new repository to create'
+        required: true
+        type: string
+      githubToken:
+        description: "The requesting user's GitHub token (masked immediately)"
+        required: true
+        type: string
+
+concurrency:
+  group: restore-${{ inputs.targetRepoName }}
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Rivet
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Must run before the token is used anywhere, so it never lands in a log.
+      - name: Mask the user token
+        run: echo "::add-mask::${{ inputs.githubToken }}"
+
+      - name: Run restore worker
+        working-directory: apps/web
+        env:
+          REPO_NAME: ${{ inputs.repoName }}
+          IPFS_CID: ${{ inputs.ipfsCid }}
+          TARGET_REPO_NAME: ${{ inputs.targetRepoName }}
+          GH_TOKEN: ${{ inputs.githubToken }}
+        run: node scripts/restore-worker.mjs

@@ -53,12 +53,12 @@ export default function Home() {
             <div className={`${styles['hero__terminal-dot']} ${styles['hero__terminal-dot--red']}`}></div>
             <div className={`${styles['hero__terminal-dot']} ${styles['hero__terminal-dot--yellow']}`}></div>
             <div className={`${styles['hero__terminal-dot']} ${styles['hero__terminal-dot--green']}`}></div>
-            <div className={styles['hero__terminal-title']}>proof-cli</div>
+            <div className={styles['hero__terminal-title']}>rivet-cli</div>
           </div>
           <div className={styles['hero__terminal-body']}>
             <div className={styles['hero__terminal-line']}>
               <span className={styles['hero__terminal-prompt']}>~ ❯</span>
-              <span className={styles['hero__terminal-cmd']}>proof backup --github jedi</span>
+              <span className={styles['hero__terminal-cmd']}>rivet backup --github jedi</span>
             </div>
             <div className={styles['hero__terminal-output']}>
               <div className={styles['hero__terminal-success']}>✓ Cloned 47 repositories (mirror mode)</div>

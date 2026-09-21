@@ -8,7 +8,7 @@ export default function AboutPage() {
         <div className={styles.hero_icon}>
           <Shield size={48} />
         </div>
-        <h1 className={styles.title}>The PROOF Manifesto</h1>
+        <h1 className={styles.title}>The Rivet Manifesto</h1>
         <p className={styles.subtitle}>
           We believe developers should own their history, not rent it from centralized platforms.
         </p>
@@ -25,7 +25,7 @@ export default function AboutPage() {
         <div className={styles.section}>
           <h2>The Solution</h2>
           <p>
-            PROOF is a decentralized bridge. We don't want to replace GitHub — we want to make it safe to use. By creating `git clone --mirror` backups and storing them on IPFS, your code is immortalized. By computing a Merkle tree of your commits and anchoring the root on the Nervos CKB blockchain via an RGB++ asset, your timestamps are mathematically provable. 
+            Rivet is a decentralized bridge. We don't want to replace GitHub — we want to make it safe to use. By creating `git clone --mirror` backups and storing them on IPFS, your code is immortalized. By computing a Merkle tree of your commits and anchoring the root on the Nervos CKB blockchain, your history is provable on-chain.
           </p>
         </div>
 
@@ -38,12 +38,12 @@ export default function AboutPage() {
           <div className={styles.card}>
             <Globe size={24} className={styles.card_icon} />
             <h3>Decentralized Security</h3>
-            <p>Your backups are stored on IPFS/Arweave. Your proofs are stored on CKB. No single entity can delete them.</p>
+            <p>Your backups are stored on IPFS. Your proofs are anchored on CKB. No single entity can delete them.</p>
           </div>
           <div className={styles.card}>
             <GitFork size={24} className={styles.card_icon} />
             <h3>Seamless Restoration</h3>
-            <p>Create a new account anywhere, and push your history back. Our `git-filter-repo` pipeline preserves your legacy.</p>
+            <p>Create a new repository anywhere, and push your history back from the IPFS bundle.</p>
           </div>
         </div>
 

@@ -27,7 +27,7 @@ export default function DocsPage() {
 
       <div className={styles.content}>
         <h1>Documentation</h1>
-        <p className={styles.lead}>Everything you need to know to secure your code with PROOF.</p>
+        <p className={styles.lead}>Everything you need to know to secure your code with Rivet.</p>
 
         <div className={styles.cards}>
           <div className={styles.card}>
@@ -48,12 +48,12 @@ export default function DocsPage() {
           <div className={styles.card}>
             <Code size={24} className={styles.card_icon} />
             <h3>API Integration</h3>
-            <p>Integrate PROOF's verification system into your own developer tools or HR platforms.</p>
+            <p>Integrate Rivet's verification system into your own developer tools or HR platforms.</p>
           </div>
         </div>
 
-        <h2>What is PROOF?</h2>
-        <p>PROOF is a decentralized repository manager designed as a fallback and permanent archive for your GitHub repositories. By mapping your git commit history to a Merkle tree and anchoring the root hash on the Nervos CKB blockchain via an RGB++ asset, PROOF guarantees that your code history is immutable and undeniable.</p>
+        <h2>What is Rivet?</h2>
+        <p>Rivet is a decentralized repository manager designed as a fallback and permanent archive for your GitHub repositories. By mapping your git commit history to a Merkle tree and anchoring the root hash on the Nervos CKB blockchain, Rivet makes your code history immutable and independently verifiable.</p>
       </div>
     </div>
   );

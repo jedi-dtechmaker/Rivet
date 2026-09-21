@@ -47,7 +47,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: { q?:
               
               <div className={styles.detail_row}>
                 <span className={styles.label}>Network</span>
-                <span className={styles.value}>CKB Mainnet</span>
+                <span className={styles.value}>CKB Testnet</span>
               </div>
               <div className={styles.detail_row}>
                 <span className={styles.label}>Transaction</span>
