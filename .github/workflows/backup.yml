@@ -24,6 +24,10 @@ on:
         description: 'Existing anchor cell to reuse, as 0x<txHash>:<index>. Empty creates a new cell.'
         required: false
         type: string
+      githubToken:
+        description: "The requesting user's GitHub token (masked immediately)"
+        required: false
+        type: string
 
 concurrency:
   group: backup-${{ github.event.inputs.jobId }}
@@ -51,6 +55,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Must run before the token is used anywhere, so it never lands in a log.
+      - name: Mask the user token
+        if: ${{ inputs.githubToken != '' }}
+        run: echo "::add-mask::${{ inputs.githubToken }}"
+
       - name: Run backup worker
         working-directory: apps/web
         env:
@@ -61,5 +70,5 @@ jobs:
           CALLBACK_SECRET: ${{ secrets.BACKUP_CALLBACK_SECRET || secrets.NEXTAUTH_SECRET }}
           PINATA_JWT: ${{ secrets.PINATA_JWT }}
           TREASURY_PRIVATE_KEY: ${{ secrets.TREASURY_PRIVATE_KEY }}
-          REPO_CLONE_TOKEN: ${{ secrets.REPO_CLONE_TOKEN }}
+          REPO_CLONE_TOKEN: ${{ inputs.githubToken || secrets.REPO_CLONE_TOKEN }}
         run: node scripts/backup-worker.mjs

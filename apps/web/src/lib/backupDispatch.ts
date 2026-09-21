@@ -147,6 +147,7 @@ export async function dispatchBackup(
       repoFullName,
       callbackUrl: `${appUrl.replace(/\/$/, '')}/api/backup/callback`,
       previousOutpoint: previousOutpoint ?? '',
+      githubToken: sessionToken || '',
     },
     // A dedicated token is preferred (the webhook path has no user session);
     // otherwise reuse the signed-in user's OAuth token, which carries repo scope.
