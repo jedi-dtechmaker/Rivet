@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Shield, Github, LogOut, User, Settings, ExternalLink, Menu, X } from 'lucide-react';
+import { Shield, Github, LogIn, LogOut, User, Settings, ExternalLink, Menu, X } from 'lucide-react';
 import { ccc } from '@ckb-ccc/connector-react';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -159,7 +159,7 @@ export function Header() {
               className={styles['header__connect-btn']}
               onClick={() => signIn('github')}
             >
-              <Github size={16} />
+              <LogIn size={16} />
               <span className={styles['header__connect-btn-text']}>Sign In</span>
             </button>
           ) : (
