@@ -13,7 +13,7 @@ export function Sidebar() {
   const { wallet } = ccc.useCcc();
   const signer = ccc.useSigner();
   const { data: session } = useSession();
-  const { isSidebarOpen } = useSidebar();
+  const { isSidebarOpen, setSidebarOpen } = useSidebar();
   const [address, setAddress] = useState<string>('Not connected');
   const [copied, setCopied] = useState(false);
   const pathname = usePathname();
@@ -86,6 +86,11 @@ export function Sidebar() {
           <Link 
             key={item.label} 
             href={item.href}
+            onClick={() => {
+              if (window.innerWidth <= 768) {
+                setSidebarOpen(false);
+              }
+            }}
             className={`${styles.nav_item} ${pathname === item.href ? styles['nav_item--active'] : ''}`}
           >
             {item.icon}

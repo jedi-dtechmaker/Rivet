@@ -200,6 +200,25 @@
     padding: 0 var(--space-4);
   }
 
+  .header__inner {
+    position: relative;
+  }
+
+  .header__left {
+    flex: 1;
+    min-width: 0;
+    gap: var(--space-3);
+  }
+
+  /* Hamburger stays in flow on the left; the logo is centred independently of
+     it so the two do not shift each other. */
+  .header__logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
   .header__nav {
     display: none;
   }
@@ -291,4 +310,48 @@
 
 .dropdown_item--danger:hover {
   background: var(--color-danger-bg);
+}
+
+.hamburger--mobile-only {
+  display: none;
+}
+
+.mobile_nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hamburger--mobile-only {
+    display: flex;
+  }
+  
+  .mobile_nav {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-elevated);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-4);
+    gap: var(--space-2);
+    box-shadow: var(--shadow-xl);
+    animation: slideDown 0.2s ease-out forwards;
+    z-index: 100;
+  }
+  
+  .mobile_nav-link {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-primary);
+    text-decoration: none;
+    transition: background var(--transition-fast);
+  }
+  
+  .mobile_nav-link:hover {
+    background: var(--color-bg-hover);
+  }
 }

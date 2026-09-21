@@ -3,37 +3,40 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 
+/**
+ * Sends the signed-in user to their own public profile.
+ *
+ * Note: users are keyed by their Github numeric id, not their email.
+ * `auth.ts` stores `githubId = profile.id.toString()` and the session callback
+ * exposes it as `session.user.id` — looking this up by email never matched, so
+ * this route used to fall through to /dashboard.
+ */
 export default async function ProfileRedirect() {
   const session = await getServerSession(authOptions);
 
-  if (!session || !session.user?.email) {
+  if (!session) {
     redirect('/');
   }
 
-  // Find the user by their email (which we used as githubId)
-  // We have to use Prisma directly here since db.ts doesn't have a findUserByGithubId helper
-  const { prisma } = await import('@/lib/db');
-  
-  const user = await prisma.user.findUnique({
-    where: { githubId: session.user.email }
-  });
+  const githubId = (session.user as any)?.id as string | undefined;
+  const user = githubId ? await db.findUserByGithubId(githubId) : null;
 
   if (!user) {
-    // If they haven't backed anything up yet, they don't have a profile. Go to dashboard.
+    // Signed in, but never synced a backup — nothing to show yet.
     redirect('/dashboard');
   }
 
-  // We need their actual github login handle, which is the prefix of their repositories.
-  // Let's get their first repository to extract the handle.
-  const repo = await prisma.repository.findFirst({
-    where: { userId: user.id }
-  });
+  // Prefer the stored handle; otherwise derive it from a repo's fullName.
+  let handle = user.githubUsername ?? null;
+  if (!handle) {
+    const repos = await db.findReposByUserId(user.id);
+    const firstFullName = repos.find((r) => r.fullName)?.fullName;
+    handle = firstFullName ? firstFullName.split('/')[0] : null;
+  }
 
-  if (repo && repo.fullName) {
-    const handle = repo.fullName.split('/')[0];
+  if (handle) {
     redirect(`/${handle}`);
   }
 
-  // Fallback
   redirect('/dashboard');
 }

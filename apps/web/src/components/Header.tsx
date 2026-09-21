@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Shield, Github, LogOut, User, Settings, ExternalLink, Menu } from 'lucide-react';
+import { Shield, Github, LogOut, User, Settings, ExternalLink, Menu, X } from 'lucide-react';
 import { ccc } from '@ckb-ccc/connector-react';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -14,6 +14,7 @@ export function Header() {
   const { data: session, status } = useSession();
   const { toggleSidebar } = useSidebar();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -87,15 +88,28 @@ export function Header() {
   };
 
   const hiddenRoutes = ['/', '/about', '/explore', '/docs'];
-  const showHamburger = isWalletConnected && !hiddenRoutes.includes(pathname);
+  const isPublicRoute = hiddenRoutes.includes(pathname);
+  
+  // Must match the Sidebar's own render condition (wallet OR session)
+  const showSidebarHamburger =
+    (isWalletConnected || isGithubLinked) && !isPublicRoute;
+    
+  const showPublicHamburger = isPublicRoute;
+  
+  const closeMobileNav = () => setIsMobileNavOpen(false);
 
   return (
     <header className={styles.header} id="main-header">
       <div className={styles.header__inner}>
         <div className={styles.header__left}>
-          {showHamburger && (
+          {showSidebarHamburger && (
             <button className={styles.hamburger} onClick={toggleSidebar} aria-label="Toggle Menu">
               <Menu size={24} />
+            </button>
+          )}
+          {showPublicHamburger && (
+            <button className={`${styles.hamburger} ${styles['hamburger--mobile-only']}`} onClick={() => setIsMobileNavOpen(!isMobileNavOpen)} aria-label="Toggle Mobile Navigation">
+              {isMobileNavOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           )}
           <Link href="/" className={styles.header__logo}>
@@ -119,6 +133,24 @@ export function Header() {
               About
             </Link>
           </nav>
+          
+          {/* Mobile Navigation Dropdown for Public Routes */}
+          {showPublicHamburger && isMobileNavOpen && (
+            <nav className={styles.mobile_nav} aria-label="Mobile navigation">
+              <Link href="/explore" className={styles['mobile_nav-link']} onClick={closeMobileNav}>
+                Explore
+              </Link>
+              <Link href="/verify" className={styles['mobile_nav-link']} onClick={closeMobileNav}>
+                Verify
+              </Link>
+              <Link href="/docs" className={styles['mobile_nav-link']} onClick={closeMobileNav}>
+                Docs
+              </Link>
+              <Link href="/about" className={styles['mobile_nav-link']} onClick={closeMobileNav}>
+                About
+              </Link>
+            </nav>
+          )}
         </div>
 
         <div className={styles.header__right}>
