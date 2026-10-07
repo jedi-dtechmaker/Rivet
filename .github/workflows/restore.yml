@@ -11,6 +11,10 @@ on:
         description: 'Original repository name (used for the description)'
         required: true
         type: string
+      jobId:
+        description: 'Unique job ID injected by the dispatcher'
+        required: false
+        type: string
       ipfsCid:
         description: 'IPFS CID of the git bundle to restore'
         required: true
