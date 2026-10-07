@@ -161,6 +161,8 @@ export async function dispatchRestore(opts: {
   ipfsCid: string;
   targetRepoName: string;
   sessionToken: string;
+  encryptionKey?: string;
+  encryptionIv?: string;
 }): Promise<DispatchResult> {
   return dispatchWorkflow({
     workflowFile: env('RIVET_RESTORE_WORKFLOW') || 'restore.yml',
@@ -170,6 +172,8 @@ export async function dispatchRestore(opts: {
       targetRepoName: opts.targetRepoName,
       // Must be the requesting user's token: the new repo belongs to them.
       githubToken: opts.sessionToken,
+      encryptionKey: opts.encryptionKey ?? '',
+      encryptionIv: opts.encryptionIv ?? '',
     },
     token: process.env.GH_DISPATCH_TOKEN || opts.sessionToken,
   });

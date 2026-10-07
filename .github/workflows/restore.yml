@@ -23,6 +23,14 @@ on:
         description: "The requesting user's GitHub token (masked immediately)"
         required: true
         type: string
+      encryptionKey:
+        description: "AES-256-GCM encryption key for the private backup"
+        required: false
+        type: string
+      encryptionIv:
+        description: "AES-256-GCM initialization vector"
+        required: false
+        type: string
 
 concurrency:
   group: restore-${{ inputs.targetRepoName }}
@@ -43,7 +51,9 @@ jobs:
 
       # Must run before the token is used anywhere, so it never lands in a log.
       - name: Mask the user token
-        run: echo "::add-mask::${{ inputs.githubToken }}"
+        run: |
+          echo "::add-mask::${{ inputs.githubToken }}"
+          if [ -n "${{ inputs.encryptionKey }}" ]; then echo "::add-mask::${{ inputs.encryptionKey }}"; fi
 
       - name: Run restore worker
         working-directory: apps/web
@@ -52,4 +62,6 @@ jobs:
           IPFS_CID: ${{ inputs.ipfsCid }}
           TARGET_REPO_NAME: ${{ inputs.targetRepoName }}
           GH_TOKEN: ${{ inputs.githubToken }}
+          ENCRYPTION_KEY: ${{ inputs.encryptionKey }}
+          ENCRYPTION_IV: ${{ inputs.encryptionIv }}
         run: node scripts/restore-worker.mjs

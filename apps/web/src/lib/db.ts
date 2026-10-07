@@ -120,6 +120,8 @@ export const db = {
     lastBackupCid: string;
     ckbTxHash: string;
     ckbCellOutpoint?: string;
+    encryptionKey?: string;
+    encryptionIv?: string;
     userId: string;
   }) {
     return prisma.repository.create({
@@ -143,6 +145,8 @@ export const db = {
     lastBackupCid: string;
     ckbTxHash: string;
     ckbCellOutpoint?: string;
+    encryptionKey?: string;
+    encryptionIv?: string;
   }) {
     return prisma.repository.update({
       where: { githubRepoId },

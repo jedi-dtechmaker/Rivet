@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
       ckbTxHash,
       ckbCellOutpoint,
       commitsProcessed,
+      encryptionKey,
+      encryptionIv,
       error,
     }: {
       jobId?: string;
@@ -53,6 +55,8 @@ export async function POST(req: NextRequest) {
       ckbTxHash?: string;
       ckbCellOutpoint?: string;
       commitsProcessed?: number;
+      encryptionKey?: string;
+      encryptionIv?: string;
       error?: string;
     } = body ?? {};
 
@@ -81,6 +85,8 @@ export async function POST(req: NextRequest) {
         lastBackupCid: ipfsCid,
         ckbTxHash,
         ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
+        ...(encryptionKey ? { encryptionKey } : {}),
+        ...(encryptionIv ? { encryptionIv } : {}),
         ...(typeof commitsProcessed === 'number' ? { commitCount: commitsProcessed } : {}),
       });
       console.log(`[backup/callback] Updated ${repoFullName} -> ${ckbTxHash}`);
@@ -102,6 +108,8 @@ export async function POST(req: NextRequest) {
         lastBackupCid: ipfsCid,
         ckbTxHash,
         ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
+        ...(encryptionKey ? { encryptionKey } : {}),
+        ...(encryptionIv ? { encryptionIv } : {}),
         userId: user.id,
       });
       console.log(`[backup/callback] Created ${repoFullName} -> ${ckbTxHash}`);

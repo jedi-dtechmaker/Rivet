@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { dispatchRestore } from '@/lib/backupDispatch';
 
 /**
@@ -34,11 +35,15 @@ export async function POST(req: NextRequest) {
 
     const targetRepoName = `${repoName}-restored`;
 
+    const existing = await db.searchRepoByProof(ipfsCid);
+
     const result = await dispatchRestore({
       repoName,
       ipfsCid,
       targetRepoName,
       sessionToken: session.accessToken,
+      encryptionKey: existing?.encryptionKey || undefined,
+      encryptionIv: existing?.encryptionIv || undefined,
     });
 
     if (!result.ok) {

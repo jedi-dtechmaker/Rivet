@@ -20,10 +20,11 @@ import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const execFileAsync = promisify(execFile);
 
-const { REPO_NAME, IPFS_CID, TARGET_REPO_NAME, GH_TOKEN } = process.env;
+const { REPO_NAME, IPFS_CID, TARGET_REPO_NAME, GH_TOKEN, ENCRYPTION_KEY, ENCRYPTION_IV } = process.env;
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
@@ -76,9 +77,28 @@ async function run() {
     if (!bundleRes.ok) {
       throw new Error(`IPFS download failed (${bundleRes.status})`);
     }
-    const bundleBytes = Buffer.from(await bundleRes.arrayBuffer());
+    let bundleBytes = Buffer.from(await bundleRes.arrayBuffer());
+    
+    if (ENCRYPTION_KEY && ENCRYPTION_IV) {
+      console.log('[restore] Decrypting bundle ...');
+      const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+      const iv = Buffer.from(ENCRYPTION_IV, 'hex');
+      
+      // The auth tag is the last 16 bytes of the encrypted buffer
+      const authTag = bundleBytes.subarray(bundleBytes.length - 16);
+      const encryptedData = bundleBytes.subarray(0, bundleBytes.length - 16);
+      
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+      decipher.setAuthTag(authTag);
+      
+      bundleBytes = Buffer.concat([
+        decipher.update(encryptedData),
+        decipher.final()
+      ]);
+    }
+    
     await fs.writeFile(bundlePath, bundleBytes);
-    console.log(`[restore] Downloaded ${(bundleBytes.length / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`[restore] Ready to expand ${(bundleBytes.length / 1024 / 1024).toFixed(2)} MB`);
 
     // 2. Expand the bundle.
     console.log('[restore] Expanding bundle ...');

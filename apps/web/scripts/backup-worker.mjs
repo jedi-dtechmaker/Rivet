@@ -23,6 +23,7 @@ import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import cryptoJs from 'crypto-js';
 import { MerkleTree } from 'merkletreejs';
 import { PinataSDK } from 'pinata-web3';
@@ -116,9 +117,22 @@ async function run() {
     console.log('[worker] Creating bundle ...');
     await execFileAsync('git', ['bundle', 'create', bundlePath, '--all'], { cwd: tmpDir });
 
-    console.log('[worker] Uploading to IPFS ...');
+    console.log('[worker] Encrypting bundle ...');
     const fileBuffer = await fs.readFile(bundlePath);
-    const blob = new Blob([fileBuffer]);
+    
+    // Generate AES-256-GCM key and IV
+    const encryptionKey = crypto.randomBytes(32);
+    const encryptionIv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey, encryptionIv);
+    
+    const encryptedBuffer = Buffer.concat([
+      cipher.update(fileBuffer),
+      cipher.final(),
+      cipher.getAuthTag()
+    ]);
+    
+    console.log('[worker] Uploading encrypted bundle to IPFS ...');
+    const blob = new Blob([encryptedBuffer]);
     const fileObj = new File([blob], `${repoName}.bundle`, {
       type: 'application/octet-stream',
     });
@@ -206,6 +220,8 @@ async function run() {
       ckbCellOutpoint,
       reusedCell: anchorResult.reused,
       commitsProcessed: commitHashes.length,
+      encryptionKey: encryptionKey.toString('hex'),
+      encryptionIv: encryptionIv.toString('hex'),
     });
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});

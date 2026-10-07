@@ -36,6 +36,8 @@ model Repository {
   // rewritten on every backup so on-chain growth is one cell per repo, not one
   // cell per backup.
   ckbCellOutpoint String?
+  encryptionKey   String?
+  encryptionIv    String?
   userId          String
   user            User     @relation(fields: [userId], references: [id])
   createdAt       DateTime @default(now())
