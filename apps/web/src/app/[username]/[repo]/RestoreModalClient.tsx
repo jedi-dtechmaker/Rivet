@@ -176,6 +176,9 @@ export function RestoreModalClient({ ipfsCid, repoName }: { ipfsCid: string, rep
             <p style={{ color: 'var(--color-text-dim)', fontSize: '13px', marginBottom: '16px' }}>
               We will download the bundle from IPFS and mirror-push it to a new repository named <strong>{repoName}-restored</strong> on your GitHub account. This runs as a background job, so it may take a minute.
             </p>
+            <p style={{ color: '#facc15', fontSize: '12px', marginBottom: '16px', padding: '8px', background: 'rgba(250, 204, 21, 0.1)', borderRadius: '6px', border: '1px solid rgba(250, 204, 21, 0.2)' }}>
+              <strong>Testnet Notice:</strong> Because we rely on free public IPFS gateways during this testnet phase, 1-Click Restore works best for <strong>small repositories</strong> (under a few MBs). For larger repos, please use the manual download option above.
+            </p>
 
             {restoreSuccess ? (
               <div style={{ padding: '12px', background: 'rgba(0,255,0,0.1)', color: '#0f0', borderRadius: '6px', fontSize: '14px' }}>
