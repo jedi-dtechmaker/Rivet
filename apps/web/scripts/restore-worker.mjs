@@ -71,11 +71,31 @@ async function run() {
   const workDir = path.join(tmpDir, 'work');
 
   try {
-    // 1. Download the bundle from IPFS.
     console.log(`[restore] Downloading bundle ${IPFS_CID} ...`);
-    const bundleRes = await fetch(`https://gateway.pinata.cloud/ipfs/${IPFS_CID}`);
-    if (!bundleRes.ok) {
-      throw new Error(`IPFS download failed (${bundleRes.status})`);
+    const gateways = [
+      `https://gateway.pinata.cloud/ipfs/${IPFS_CID}`,
+      `https://ipfs.io/ipfs/${IPFS_CID}`,
+      `https://cloudflare-ipfs.com/ipfs/${IPFS_CID}`,
+      `https://ipfs.eth.aragon.network/ipfs/${IPFS_CID}`,
+    ];
+
+    let bundleRes;
+    for (const gw of gateways) {
+      console.log(`[restore] Trying ${gw} ...`);
+      try {
+        const res = await fetch(gw);
+        if (res.ok) {
+          bundleRes = res;
+          break;
+        }
+        console.log(`[restore] ${gw} failed with status ${res.status}`);
+      } catch (err) {
+        console.log(`[restore] ${gw} failed with error ${err.message}`);
+      }
+    }
+
+    if (!bundleRes || !bundleRes.ok) {
+      throw new Error(`All IPFS gateways failed to download ${IPFS_CID}`);
     }
     let bundleBytes = Buffer.from(await bundleRes.arrayBuffer());
     
