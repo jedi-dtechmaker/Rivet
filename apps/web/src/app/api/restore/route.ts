@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid repoName' }, { status: 400 });
     }
 
-    const targetRepoName = `${repoName}-restored`;
+    // Append a short timestamp so repeated restores never clash with an
+    // already-existing "{repoName}-restored" repository on the user's account.
+    const suffix = Date.now().toString(36).slice(-5);
+    const targetRepoName = `${repoName}-restored-${suffix}`;
 
     const existing = await db.searchRepoByProof(ipfsCid);
 
