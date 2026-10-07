@@ -72,26 +72,49 @@ async function run() {
 
   try {
     console.log(`[restore] Downloading bundle ${IPFS_CID} ...`);
-    const gateways = [
-      `https://gateway.pinata.cloud/ipfs/${IPFS_CID}`,
-      `https://ipfs.io/ipfs/${IPFS_CID}`,
-      `https://cloudflare-ipfs.com/ipfs/${IPFS_CID}`,
-      `https://ipfs.eth.aragon.network/ipfs/${IPFS_CID}`,
+
+    // Ordered list of (url, headers) pairs to try.
+    // 1. Pinata authenticated gateway — most reliable since that's where we pinned.
+    // 2. Public gateways as fallback.
+    const attempts = [
+      ...(PINATA_JWT ? [{
+        url: `https://gateway.pinata.cloud/ipfs/${IPFS_CID}`,
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        label: 'Pinata (authenticated)',
+      }] : []),
+      { url: `https://${IPFS_CID}.ipfs.dweb.link`,         headers: {}, label: 'dweb.link' },
+      { url: `https://${IPFS_CID}.ipfs.w3s.link`,          headers: {}, label: 'w3s.link' },
+      { url: `https://${IPFS_CID}.ipfs.nftstorage.link`,   headers: {}, label: 'nftstorage.link' },
+      { url: `https://ipfs.io/ipfs/${IPFS_CID}`,           headers: {}, label: 'ipfs.io' },
     ];
 
     let bundleRes;
-    for (const gw of gateways) {
-      console.log(`[restore] Trying ${gw} ...`);
-      try {
-        const res = await fetch(gw);
-        if (res.ok) {
-          bundleRes = res;
+    for (const attempt of attempts) {
+      // Retry this gateway up to 3 times on 429 (rate-limited).
+      for (let retry = 0; retry < 3; retry++) {
+        console.log(`[restore] Trying ${attempt.label}${retry > 0 ? ` (retry ${retry})` : ''} ...`);
+        try {
+          const res = await fetch(attempt.url, { headers: attempt.headers });
+          if (res.ok) {
+            bundleRes = res;
+            break;
+          }
+          if (res.status === 429) {
+            // Honour the Retry-After header if present, else back off 15 s.
+            const retryAfter = Number(res.headers.get('retry-after') || 15);
+            const wait = Math.min(retryAfter, 30) * 1000;
+            console.log(`[restore] ${attempt.label} rate-limited; waiting ${wait / 1000}s ...`);
+            await new Promise(r => setTimeout(r, wait));
+            continue; // retry same gateway
+          }
+          console.log(`[restore] ${attempt.label} failed (${res.status})`);
+          break; // non-429 error: move to next gateway
+        } catch (err) {
+          console.log(`[restore] ${attempt.label} error: ${err.message}`);
           break;
         }
-        console.log(`[restore] ${gw} failed with status ${res.status}`);
-      } catch (err) {
-        console.log(`[restore] ${gw} failed with error ${err.message}`);
       }
+      if (bundleRes) break;
     }
 
     if (!bundleRes || !bundleRes.ok) {

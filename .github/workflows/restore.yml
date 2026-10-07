@@ -68,4 +68,5 @@ jobs:
           GH_TOKEN: ${{ inputs.githubToken }}
           ENCRYPTION_KEY: ${{ inputs.encryptionKey }}
           ENCRYPTION_IV: ${{ inputs.encryptionIv }}
+          PINATA_JWT: ${{ secrets.PINATA_JWT }}
         run: node scripts/restore-worker.mjs
