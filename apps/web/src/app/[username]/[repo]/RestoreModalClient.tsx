@@ -191,29 +191,14 @@ export function RestoreModalClient({ ipfsCid, repoName }: { ipfsCid: string, rep
               <div>
                 <button
                   className="btn btn--primary"
-                  onClick={handleAutomatedRestore}
-                  disabled={isRestoring}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#333' }}
+                  disabled={true}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#333', opacity: 0.5, cursor: 'not-allowed' }}
                 >
-                  {isRestoring ? (
-                    <><RefreshCw size={14} className="spin" /> {statusText || 'Restoring to GitHub...'}</>
-                  ) : (
-                    <><Github size={14} /> 1-Click Restore to GitHub</>
-                  )}
+                  <Github size={14} /> 1-Click Restore to GitHub
                 </button>
-                {restoreError && (
-                  <div style={{ color: 'var(--color-error)', fontSize: '13px', marginTop: '8px' }}>
-                    {restoreError}
-                    {runUrl && (
-                      <>
-                        {' '}
-                        <a href={runUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--color-brand-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <ExternalLink size={11} /> View run
-                        </a>
-                      </>
-                    )}
-                  </div>
-                )}
+                <div style={{ color: '#facc15', fontSize: '13px', marginTop: '12px' }}>
+                  🚧 <strong>Coming Soon!</strong> This feature is currently disabled on testnet. Please use the manual download option above.
+                </div>
               </div>
             )}
           </div>
