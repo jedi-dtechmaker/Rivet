@@ -144,7 +144,8 @@ export function RestoreModalClient({ ipfsCid, repoName }: { ipfsCid: string, rep
 
           <div style={{ marginBottom: '24px' }}>
             <a
-              href={`https://gateway.pinata.cloud/ipfs/${ipfsCid}`}
+              href={`https://gateway.pinata.cloud/ipfs/${ipfsCid}?filename=${encodeURIComponent(repoName)}.bundle&download=true`}
+              download={`${repoName}.bundle`}
               target="_blank"
               rel="noreferrer"
               className="btn btn--primary"
