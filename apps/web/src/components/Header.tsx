@@ -22,7 +22,7 @@ export function Header() {
   const [address, setAddress] = useState<string>('');
 
   useEffect(() => {
-    async function syncWallet() {
+    async function readWalletAddress() {
       if (!signer) {
         setAddress('');
         return;
@@ -31,25 +31,11 @@ export function Header() {
       try {
         const addr = await signer.getRecommendedAddress();
         setAddress(addr);
-
-        // Linking a wallet only makes sense against a signed-in Github account.
-        if (!session) return;
-
-        const res = await fetch('/api/user/sync-wallet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ckbAddress: addr }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          console.error('[wallet] Could not link wallet:', data.error || res.status);
-        }
       } catch (e) {
         console.error(e);
       }
     }
-    syncWallet();
+    readWalletAddress();
   }, [signer, session]);
 
   const isWalletConnected = !!wallet;
@@ -69,16 +55,9 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleWalletDisconnect = async () => {
+  const handleWalletDisconnect = () => {
     disconnect();
     setIsDropdownOpen(false);
-    // Clear the server-side link so the account is not left pointing at a wallet
-    // the user no longer controls.
-    try {
-      await fetch('/api/user/sync-wallet', { method: 'DELETE' });
-    } catch (e) {
-      console.error(e);
-    }
     setAddress('');
   };
 
@@ -235,6 +214,9 @@ export function Header() {
                       </button>
                     </>
                   )}
+                  <Link href="/dashboard#identity" className={styles.dropdown_item} onClick={() => setIsDropdownOpen(false)}>
+                    <Shield size={14} /> Manage Identity
+                  </Link>
                   
                   <div style={{ borderTop: '1px solid var(--color-border)', margin: '4px 0' }}></div>
 

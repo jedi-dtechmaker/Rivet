@@ -79,41 +79,21 @@ export async function POST(req: NextRequest) {
 
     const existingRepo = await db.findRepo(repoFullName);
 
-    if (existingRepo) {
-      await db.updateRepo(repoFullName, {
-        isBackedUp: true,
-        lastBackupCid: ipfsCid,
-        ckbTxHash,
-        ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
-        ...(encryptionKey ? { encryptionKey } : {}),
-        ...(encryptionIv ? { encryptionIv } : {}),
-        ...(typeof commitsProcessed === 'number' ? { commitCount: commitsProcessed } : {}),
-      });
-      console.log(`[backup/callback] Updated ${repoFullName} -> ${ckbTxHash}`);
-    } else {
-      // The repo was never tracked (e.g. backed up before first visit).
-      const user = await db.findFirstUser();
-      if (!user) {
-        console.error(`[backup/callback] No user to attach ${repoFullName} to`);
-        return NextResponse.json({ error: 'No user available' }, { status: 409 });
-      }
-
-      await db.createRepo({
-        githubRepoId: repoFullName,
-        name: repoFullName.split('/')[1],
-        fullName: repoFullName,
-        isBackedUp: true,
-        isPrivate: false,
-        commitCount: commitsProcessed ?? 0,
-        lastBackupCid: ipfsCid,
-        ckbTxHash,
-        ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
-        ...(encryptionKey ? { encryptionKey } : {}),
-        ...(encryptionIv ? { encryptionIv } : {}),
-        userId: user.id,
-      });
-      console.log(`[backup/callback] Created ${repoFullName} -> ${ckbTxHash}`);
+    if (!existingRepo) {
+      console.error(`[backup/callback] No registered backup owner for ${repoFullName}`);
+      return NextResponse.json({ error: 'Repository was not registered before backup. Start a new backup from your account.' }, { status: 409 });
     }
+
+    await db.updateRepo(repoFullName, {
+      isBackedUp: true,
+      lastBackupCid: ipfsCid,
+      ckbTxHash,
+      ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
+      ...(encryptionKey ? { encryptionKey } : {}),
+      ...(encryptionIv ? { encryptionIv } : {}),
+      ...(typeof commitsProcessed === 'number' ? { commitCount: commitsProcessed } : {}),
+    });
+    console.log(`[backup/callback] Updated ${repoFullName} -> ${ckbTxHash}`);
 
     return NextResponse.json({
       acknowledged: true,

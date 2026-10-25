@@ -6,6 +6,7 @@ import { Search, Filter, ShieldCheck, Database, RefreshCw, FolderGit2, Star, Clo
 import { BackupButton } from '@/components/BackupButton';
 import { SyncButtonClient } from './SyncButtonClient';
 import { AutoSyncToggle } from '@/components/AutoSyncToggle';
+import { WalletIdentity } from '@/components/WalletIdentity';
 import { db } from '@/lib/db';
 import type { Repository } from '@prisma/client';
 import styles from './page.module.css';
@@ -116,6 +117,8 @@ export default async function Dashboard() {
           </button>
         </div>
       </div>
+
+      <WalletIdentity />
 
       {githubError && (
         <div style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>

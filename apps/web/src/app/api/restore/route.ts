@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, prisma } from '@/lib/db';
 import { dispatchRestore } from '@/lib/backupDispatch';
+import { walletRequestOrigin } from '@/lib/wallet-request';
 
 /**
  * Starts a restore job. Returns immediately (202); the git work (download the
@@ -18,9 +19,11 @@ const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.accessToken) {
+    if (!session?.user?.id || !session.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    try { walletRequestOrigin(req); }
+    catch { return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 }); }
 
     const body = await req.json().catch(() => ({}));
     const { ipfsCid, repoName } = body ?? {};
@@ -38,10 +41,15 @@ export async function POST(req: NextRequest) {
     const suffix = Date.now().toString(36).slice(-5);
     const targetRepoName = `${repoName}-restored-${suffix}`;
 
-    const existing = await db.searchRepoByProof(ipfsCid);
+    const user = await db.findUserByGithubId(session.user.id);
+    if (!user) return NextResponse.json({ error: 'Account not found. Sign in again.' }, { status: 404 });
+    const existing = await prisma.repository.findFirst({ where: { userId: user.id, lastBackupCid: ipfsCid, isBackedUp: true } });
+    if (!existing) return NextResponse.json({ error: 'Backup not found for this account.' }, { status: 404 });
+    if (existing.isPrivate) return NextResponse.json({ error: 'Private repository restores are disabled on testnet. Contact the operator to recover an existing private backup.' }, { status: 403 });
 
     const result = await dispatchRestore({
-      repoName,
+      userId: user.id,
+      repoName: existing.name,
       ipfsCid,
       targetRepoName,
       sessionToken: session.accessToken,

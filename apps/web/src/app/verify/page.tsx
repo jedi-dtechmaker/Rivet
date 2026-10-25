@@ -3,8 +3,8 @@ import styles from './page.module.css';
 import { db } from '@/lib/db';
 import { VerifySearchClient } from './VerifySearchClient';
 
-export default async function VerifyPage({ searchParams }: { searchParams: { q?: string } }) {
-  const query = searchParams.q || '';
+export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const query = (await searchParams).q || '';
   
   // Real database search
   let repo = null;

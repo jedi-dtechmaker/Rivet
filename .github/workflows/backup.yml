@@ -30,7 +30,8 @@ on:
         type: string
 
 concurrency:
-  group: backup-${{ github.event.inputs.jobId }}
+  group: rivet-backup-treasury
+  queue: max
   cancel-in-progress: false
 
 jobs:
@@ -44,12 +45,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 12.4.2
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -58,7 +59,9 @@ jobs:
       # Must run before the token is used anywhere, so it never lands in a log.
       - name: Mask the user token
         if: ${{ inputs.githubToken != '' }}
-        run: echo "::add-mask::${{ inputs.githubToken }}"
+        env:
+          USER_GITHUB_TOKEN: ${{ inputs.githubToken }}
+        run: echo "::add-mask::$USER_GITHUB_TOKEN"
 
       - name: Run backup worker
         working-directory: apps/web
@@ -70,5 +73,4 @@ jobs:
           CALLBACK_SECRET: ${{ secrets.BACKUP_CALLBACK_SECRET || secrets.NEXTAUTH_SECRET }}
           PINATA_JWT: ${{ secrets.PINATA_JWT }}
           TREASURY_PRIVATE_KEY: ${{ secrets.TREASURY_PRIVATE_KEY }}
-          REPO_CLONE_TOKEN: ${{ inputs.githubToken || secrets.REPO_CLONE_TOKEN }}
         run: node scripts/backup-worker.mjs

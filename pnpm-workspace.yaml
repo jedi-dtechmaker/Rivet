@@ -12,3 +12,13 @@ allowBuilds:
   sharp: false
   unix-dgram: false
   workerd: true
+patchedDependencies:
+  '@ckb-ccc/connector@2.2.2': patches/@ckb-ccc__connector@2.2.2.patch
+overrides:
+  postcss@<8.5.23: 8.5.23
+  source-map-js@<1.2.2: 1.2.2
+  shell-quote@<1.11.0: 1.11.0
+  follow-redirects@<1.16.1: 1.16.1
+  sharp@<0.35.5: 0.35.5
+  zod@>=4.0.0 <4.6.6: 4.6.6
+  '@joyid/common>abitype': 1.3.0

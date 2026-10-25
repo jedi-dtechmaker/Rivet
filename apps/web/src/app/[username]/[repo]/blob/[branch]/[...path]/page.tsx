@@ -7,10 +7,11 @@ import { authOptions } from '@/lib/auth';
 
 // We get an array for `path` because of the [...path] catch-all route
 export default async function BlobPage({ 
-  params 
+  params: pendingParams
 }: { 
-  params: { username: string; repo: string; branch: string; path: string[] } 
+  params: Promise<{ username: string; repo: string; branch: string; path: string[] }>
 }) {
+  const params = await pendingParams;
   const filePath = params.path.join('/');
   const basePath = `/${params.username}/${params.repo}`;
   const fullName = `${params.username}/${params.repo}`;

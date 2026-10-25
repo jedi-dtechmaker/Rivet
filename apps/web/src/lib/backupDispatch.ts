@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { reserveWorkerDispatch } from '@/lib/worker-quota';
 
 /**
  * Dispatches jobs to the Rivet GitHub Actions workers.
@@ -62,6 +63,8 @@ export async function dispatchWorkflow(opts: {
   workflowFile: string;
   inputs: Record<string, string>;
   token?: string;
+  userId: string;
+  kind: 'backup' | 'restore';
 }): Promise<DispatchResult> {
   const target = resolveWorkflowRepo();
 
@@ -74,17 +77,28 @@ export async function dispatchWorkflow(opts: {
   }
 
   if (!opts.token) {
-    console.error('[dispatch] No token available to dispatch the workflow');
-    return { ok: false, status: 500, error: 'Workers are not configured on the server' };
+    console.error('[dispatch] Configure GH_DISPATCH_TOKEN with Actions write access to the Rivet worker repository');
+    return { ok: false, status: 503, error: 'Rivet backup and restore workers are not configured. Please contact support.' };
   }
 
   const jobId = randomUUID();
+
+  if (process.env.RIVET_WORKERS_ENABLED === 'false') return { ok: false, status: 503, error: 'Backup and restore workers are temporarily paused.' };
+  if (!opts.userId) return { ok: false, status: 401, error: 'Sign in before starting a worker.' };
+  try {
+    const quota = await reserveWorkerDispatch(opts.userId, jobId, opts.kind);
+    if (!quota.allowed) return { ok: false, status: 429, error: quota.error };
+  } catch {
+    console.error('[dispatch] Worker budget storage is unavailable');
+    return { ok: false, status: 503, error: 'Could not check the worker budget. Please retry shortly.' };
+  }
 
   try {
     const res = await fetch(
       `https://api.github.com/repos/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}/dispatches`,
       {
         method: 'POST',
+        signal: AbortSignal.timeout(15000),
         headers: {
           Authorization: `Bearer ${opts.token}`,
           Accept: 'application/vnd.github+json',
@@ -100,14 +114,15 @@ export async function dispatchWorkflow(opts: {
 
     // Success is 204 No Content.
     if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      console.error(`[dispatch] ${opts.workflowFile} failed (${res.status}): ${detail}`);
+      console.error(`[dispatch] ${opts.workflowFile} failed (${res.status})`);
 
       const hint =
         res.status === 404
           ? 'Workflow not found on the default branch, or the token lacks access.'
-          : res.status === 403 || res.status === 401
-            ? 'The dispatch token is invalid or lacks the required scope.'
+          : res.status === 401
+            ? "Rivet's worker credential is invalid or expired. Please contact support."
+          : res.status === 403
+            ? 'GitHub denied Rivet permission to start the worker. Please contact support.'
             : 'GitHub rejected the workflow dispatch.';
 
       return { ok: false, status: 502, error: `Failed to start the worker. ${hint}` };
@@ -132,7 +147,7 @@ export async function dispatchWorkflow(opts: {
  */
 export async function dispatchBackup(
   repoFullName: string,
-  sessionToken?: string,
+  userId: string,
   previousOutpoint?: string | null,
 ): Promise<DispatchResult> {
   const appUrl = resolveAppUrl();
@@ -142,21 +157,20 @@ export async function dispatchBackup(
   }
 
   return dispatchWorkflow({
+    userId, kind: 'backup',
     workflowFile: env('RIVET_BACKUP_WORKFLOW', 'PROOF_BACKUP_WORKFLOW') || 'backup.yml',
     inputs: {
       repoFullName,
       callbackUrl: `${appUrl.replace(/\/$/, '')}/api/backup/callback`,
       previousOutpoint: previousOutpoint ?? '',
-      githubToken: sessionToken || '',
     },
-    // A dedicated token is preferred (the webhook path has no user session);
-    // otherwise reuse the signed-in user's OAuth token, which carries repo scope.
-    token: process.env.GH_DISPATCH_TOKEN || sessionToken,
+    token: process.env.GH_DISPATCH_TOKEN,
   });
 }
 
 /** Start a restore job for the signed-in user. */
 export async function dispatchRestore(opts: {
+  userId: string;
   repoName: string;
   ipfsCid: string;
   targetRepoName: string;
@@ -165,6 +179,7 @@ export async function dispatchRestore(opts: {
   encryptionIv?: string;
 }): Promise<DispatchResult> {
   return dispatchWorkflow({
+    userId: opts.userId, kind: 'restore',
     workflowFile: env('RIVET_RESTORE_WORKFLOW') || 'restore.yml',
     inputs: {
       repoName: opts.repoName,
@@ -175,6 +190,6 @@ export async function dispatchRestore(opts: {
       encryptionKey: opts.encryptionKey ?? '',
       encryptionIv: opts.encryptionIv ?? '',
     },
-    token: process.env.GH_DISPATCH_TOKEN || opts.sessionToken,
+    token: process.env.GH_DISPATCH_TOKEN,
   });
 }

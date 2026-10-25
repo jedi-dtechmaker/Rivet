@@ -7,8 +7,11 @@ export const authOptions: NextAuthOptions = {
     GithubProvider({
       clientId: process.env.GITHUB_ID || '',
       clientSecret: process.env.GITHUB_SECRET || '',
+      httpOptions: {
+        timeout: 30_000,
+      },
       authorization: {
-        params: { scope: 'read:user user:email repo' },
+        params: { scope: 'read:user user:email repo admin:repo_hook' },
       },
     }),
   ],

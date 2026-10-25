@@ -12,12 +12,40 @@ model User {
   githubId        String       @unique
   githubUsername  String?
   ckbAddress      String?      @unique
+  ckbAddressVerifiedAt DateTime?
   bio             String?
   isProfilePublic Boolean      @default(true)
   autoSync        Boolean      @default(false)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   repositories    Repository[]
+  walletChallenge WalletChallenge?
+  cotaRegistration CotaRegistration?
+  cotaUpdates     CotaUpdate[]
+  workerDispatches WorkerDispatch[]
+}
+
+model WalletChallenge {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  address   String
+  message   String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CotaRegistration {
+  userId      String   @id
+  address     String   @unique
+  txHash      String
+  outputIndex Int
+  transaction Json?
+  status      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([txHash, outputIndex])
 }
 
 model Repository {
@@ -42,4 +70,36 @@ model Repository {
   user            User     @relation(fields: [userId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model CotaUpdate {
+  id                  String   @id @default(uuid())
+  userId              String
+  sourceOutpoint      String
+  protocol            String   @default("cota-smt-v1")
+  txHash              String
+  root                String
+  previousRoot        String
+  records             Json
+  leaves              Json
+  unsignedTransaction Json
+  signedTransaction   Json?
+  status              String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, sourceOutpoint, protocol])
+  @@index([userId, createdAt])
+}
+
+model WorkerDispatch {
+  id        String   @id
+  userId    String
+  kind      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }

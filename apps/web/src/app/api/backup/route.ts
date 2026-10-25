@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, prisma } from '@/lib/db';
 import { dispatchBackup, isValidRepoFullName } from '@/lib/backupDispatch';
+import { PRIVATE_BACKUP_MESSAGE, readPublicRepository } from '@/lib/public-repository';
+import { walletRequestOrigin } from '@/lib/wallet-request';
 
 /**
  * Starts a backup job. Returns immediately (202) with a job id; the heavy work
@@ -11,9 +13,11 @@ import { dispatchBackup, isValidRepoFullName } from '@/lib/backupDispatch';
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.accessToken) {
+    if (!session?.user?.id || !session.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    try { walletRequestOrigin(req); }
+    catch { return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 }); }
 
     const body = await req.json().catch(() => ({}));
     const repoFullName = body?.repoFullName;
@@ -21,17 +25,39 @@ export async function POST(req: NextRequest) {
     if (!isValidRepoFullName(repoFullName)) {
       return NextResponse.json({ error: 'Invalid repoFullName' }, { status: 400 });
     }
+    if (body.isPrivate === true) return NextResponse.json({ error: PRIVATE_BACKUP_MESSAGE }, { status: 403 });
 
-    // If this repo already has an anchor cell, hand its outpoint to the worker so
-    // it spends and rewrites that cell rather than creating a new one.
-    const existing = await db.findRepo(repoFullName);
+    const user = await db.findUserByGithubId(session.user.id);
+    if (!user) {
+      return NextResponse.json({ error: 'Account not found. Sign in again.' }, { status: 404 });
+    }
+    const access = await readPublicRepository(repoFullName, session.accessToken);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+    const githubRepo = access.repository;
+    if (String(githubRepo.owner?.id) !== session.user.id && !githubRepo.permissions?.push && !githubRepo.permissions?.admin) {
+      return NextResponse.json({ error: 'Choose a repository you own or have write access to.' }, { status: 403 });
+    }
+
+    const existing = await prisma.repository.upsert({
+      where: { githubRepoId: repoFullName },
+      update: {},
+      create: {
+        githubRepoId: repoFullName,
+        fullName: repoFullName,
+        name: repoFullName.split('/')[1],
+        userId: user.id,
+        isPrivate: false,
+        isBackedUp: false,
+      },
+    });
+    if (existing.userId !== user.id) {
+      return NextResponse.json({ error: 'This repository is managed by another Rivet account.' }, { status: 403 });
+    }
     const previousOutpoint = existing?.ckbCellOutpoint ?? undefined;
 
-    // The user's OAuth token already has `repo` scope, so it can dispatch the
-    // workflow on their own repository without a separate PAT.
     const result = await dispatchBackup(
       repoFullName,
-      session.accessToken,
+      user.id,
       previousOutpoint,
     );
 

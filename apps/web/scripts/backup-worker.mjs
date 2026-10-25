@@ -15,7 +15,6 @@
  *
  * Requires env: REPO_FULL_NAME, JOB_ID, CALLBACK_URL, CALLBACK_SECRET,
  *               PINATA_JWT, TREASURY_PRIVATE_KEY
- * Optional env: REPO_CLONE_TOKEN (needed only for private repos)
  */
 
 import { execFile } from 'node:child_process';
@@ -37,7 +36,6 @@ const {
   CALLBACK_SECRET,
   PINATA_JWT,
   TREASURY_PRIVATE_KEY,
-  REPO_CLONE_TOKEN,
   PREVIOUS_OUTPOINT,
 } = process.env;
 
@@ -81,10 +79,17 @@ async function run() {
   if (!PINATA_JWT) throw new Error('Missing PINATA_JWT');
   if (!TREASURY_PRIVATE_KEY) throw new Error('Missing TREASURY_PRIVATE_KEY');
 
+  const repositoryResponse = await fetch(`https://api.github.com/repos/${REPO_FULL_NAME}`, {
+    headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(15000),
+  });
+  if (!repositoryResponse.ok) throw new Error('Only public repositories can be backed up on testnet.');
+  const repository = await repositoryResponse.json();
+  if (repository.private !== false || repository.full_name?.toLowerCase() !== REPO_FULL_NAME.toLowerCase()) {
+    throw new Error('Only public repositories can be backed up on testnet.');
+  }
+
   const repoName = REPO_FULL_NAME.split('/')[1];
-  const cloneUrl = REPO_CLONE_TOKEN
-    ? `https://x-access-token:${REPO_CLONE_TOKEN}@github.com/${REPO_FULL_NAME}.git`
-    : `https://github.com/${REPO_FULL_NAME}.git`;
+  const cloneUrl = `https://github.com/${REPO_FULL_NAME}.git`;
 
   // mkdtemp gives us a unique, writable scratch dir.
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'rivet-'));

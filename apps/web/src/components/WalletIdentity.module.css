@@ -1,0 +1,46 @@
+.card {
+  padding: var(--space-6);
+  margin-bottom: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-secondary);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.heading h2 {
+  font-size: var(--text-lg);
+  margin: 0;
+}
+
+.badge {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.description {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.address {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.error {
+  color: var(--color-danger);
+}

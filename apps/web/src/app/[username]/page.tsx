@@ -8,7 +8,8 @@ import { authOptions } from '@/lib/auth';
 import ProfileRepoListClient from './ProfileRepoListClient';
 import CopyAddressClient from './CopyAddressClient';
 
-export default async function PublicProfilePage({ params }: { params: { username: string } }) {
+export default async function PublicProfilePage({ params: pendingParams }: { params: Promise<{ username: string }> }) {
+  const params = await pendingParams;
   const session = await getServerSession(authOptions);
   
   // Find user by github username
@@ -19,7 +20,7 @@ export default async function PublicProfilePage({ params }: { params: { username
   }
 
   // Check ownership using the stored githubId (which we mapped to email in the demo)
-  const isOwner = session?.user?.email === user.githubId;
+  const isOwner = session?.user?.id === user.githubId;
   
   // Handle Private Profile
   if (!user.isProfilePublic && !isOwner) {

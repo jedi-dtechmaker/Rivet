@@ -4,10 +4,11 @@ import { FileTree } from '@/components/repo/FileTree';
 import styles from './page.module.css';
 
 export default async function TreePage({ 
-  params 
+  params: pendingParams
 }: { 
-  params: { username: string; repo: string; branch: string; path: string[] } 
+  params: Promise<{ username: string; repo: string; branch: string; path: string[] }>
 }) {
+  const params = await pendingParams;
   const dirPath = params.path.join('/');
   const basePath = `/${params.username}/${params.repo}`;
 

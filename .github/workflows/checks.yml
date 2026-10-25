@@ -1,0 +1,48 @@
+name: Release checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: rivet_test
+          POSTGRES_USER: rivet_test
+          POSTGRES_PASSWORD: local_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rivet_test -d rivet_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://rivet_test:local_ci_only@127.0.0.1:5432/rivet_test
+      RIVET_TEST_DATABASE_URL: postgresql://rivet_test:local_ci_only@127.0.0.1:5432/rivet_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level=moderate
+      - name: Install disposable test schema
+        run: pnpm --filter @proof/web exec prisma db push --skip-generate
+      - name: Verify additive release setup
+        run: pnpm --filter @proof/web run release:setup
+      - run: pnpm --filter @proof/web test
+      - run: pnpm --filter @proof/web exec tsc --noEmit --incremental false
+      - run: pnpm --filter @proof/web build

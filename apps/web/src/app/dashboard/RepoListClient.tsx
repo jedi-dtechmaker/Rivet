@@ -140,6 +140,7 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
             <p className={styles.card__desc}>
               {repo.description}
             </p>
+            {repo.isPrivate && <p role="note">Private repository backup and restore are disabled on testnet. Encrypted private support is planned for a later release.</p>}
 
             <div className={styles.card__meta}>
               <div className={styles.meta_item}>

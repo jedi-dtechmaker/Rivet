@@ -34,6 +34,7 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
   };
 
   const handleBackup = async () => {
+    if (isPrivate) return;
     cancelledRef.current = false;
     stopPolling();
 
@@ -107,6 +108,10 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
       setStatus('idle');
     }
   };
+
+  if (isPrivate) {
+    return <p role="note">Private backups are disabled on testnet. Choose a public repository; encrypted private backups are planned for a later release.</p>;
+  }
 
   if (status === 'backed_up') {
     return (

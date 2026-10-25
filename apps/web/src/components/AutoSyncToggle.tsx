@@ -7,10 +7,12 @@ import { useRouter } from 'next/navigation';
 export function AutoSyncToggle({ initialAutoSync }: { initialAutoSync: boolean }) {
   const [isAutoSync, setIsAutoSync] = useState(initialAutoSync);
   const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleToggle = async () => {
     setIsPending(true);
+    setError('');
     const newValue = !isAutoSync;
     setIsAutoSync(newValue); // Optimistic UI update
 
@@ -22,13 +24,15 @@ export function AutoSyncToggle({ initialAutoSync }: { initialAutoSync: boolean }
       });
 
       if (!res.ok) {
-        throw new Error('Failed to update Auto-Sync setting');
+        const result = await res.json().catch(() => ({}));
+        throw new Error(result.error || 'Failed to update Auto-Sync setting');
       }
       
       router.refresh();
     } catch (e) {
       console.error(e);
       setIsAutoSync(!newValue); // Revert on failure
+      setError(e instanceof Error ? e.message : 'Could not update Auto Sync.');
     } finally {
       setIsPending(false);
     }
@@ -66,6 +70,7 @@ export function AutoSyncToggle({ initialAutoSync }: { initialAutoSync: boolean }
         {isAutoSync ? 'Auto-Sync Active' : 'Auto-Sync Off'}
         {isPending && <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />}
       </label>
+      {error && <span role="alert">{error}</span>}
     </div>
   );
 }

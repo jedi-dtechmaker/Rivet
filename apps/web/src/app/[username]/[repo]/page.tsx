@@ -5,12 +5,13 @@ import { FileTree } from '@/components/repo/FileTree';
 import { RestoreModalClient } from './RestoreModalClient';
 import styles from './page.module.css';
 
-export default async function RepoHome({ params }: { params: { username: string; repo: string } }) {
+export default async function RepoHome({ params: pendingParams }: { params: Promise<{ username: string; repo: string }> }) {
+  const params = await pendingParams;
   const fullName = `${params.username}/${params.repo}`;
   const repo = await db.findRepo(fullName);
 
   // Dynamically determine the base URL
-  const headersList = headers();
+  const headersList = await headers();
   const host = headersList.get('host') || 'localhost:3000';
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;

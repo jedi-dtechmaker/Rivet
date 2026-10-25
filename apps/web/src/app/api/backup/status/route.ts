@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
 
     const repo = await db.findRepo(repoFullName);
 
-    if (!repo) {
+    const user = await db.findUserByGithubId(session.user.id);
+    if (!repo || !user || repo.userId !== user.id) {
       return NextResponse.json({ status: 'pending' });
     }
 

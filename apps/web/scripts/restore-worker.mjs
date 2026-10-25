@@ -24,7 +24,7 @@ import crypto from 'node:crypto';
 
 const execFileAsync = promisify(execFile);
 
-const { REPO_NAME, IPFS_CID, TARGET_REPO_NAME, GH_TOKEN, ENCRYPTION_KEY, ENCRYPTION_IV } = process.env;
+const { REPO_NAME, IPFS_CID, TARGET_REPO_NAME, GH_TOKEN, ENCRYPTION_KEY, ENCRYPTION_IV, PINATA_JWT } = process.env;
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
@@ -145,7 +145,7 @@ async function run() {
 
     // 2. Expand the bundle.
     console.log('[restore] Expanding bundle ...');
-    await execFileAsync('git', ['clone', bundlePath, workDir]);
+    await execFileAsync('git', ['clone', '--mirror', bundlePath, workDir]);
 
     // 3. Create the destination repository.
     console.log(`[restore] Creating ${login}/${TARGET_REPO_NAME} ...`);

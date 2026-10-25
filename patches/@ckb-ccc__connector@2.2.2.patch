@@ -1,0 +1,51 @@
+diff --git a/dist/connector/index.js b/dist/connector/index.js
+index 6198bb509d0446bef03d811d5486d8b44a7ab336..3f834759c3053731614350816bff92d6e5b1940c 100644
+--- a/dist/connector/index.js
++++ b/dist/connector/index.js
+@@ -101,6 +101,7 @@ let WebComponentConnector = class WebComponentConnector extends LitElement {
+             this.disconnect();
+         }
+         if (changedProperties.has("client") &&
++            this.client &&
+             !(this.client instanceof ClientWithFeeRate)) {
+             this.requestClientWithFeeRate();
+         }
+diff --git a/dist/signers/index.js b/dist/signers/index.js
+index 3aa4aeb5b13f2b0d261139af0fd62fde96c3bc1c..5cf9e3dec062912987336d1b7fd98df327e87268 100644
+--- a/dist/signers/index.js
++++ b/dist/signers/index.js
+@@ -7,6 +7,9 @@ export class SignersController {
+     }
+     refresh() {
+         const refreshId = ++this.refreshId;
++        if (!this.host.client) {
++            return Promise.resolve();
++        }
+         return this.host.signersController.refresh(this.host.client, (wallets) => {
+             if (refreshId !== this.refreshId) {
+                 return;
+diff --git a/src/connector/index.ts b/src/connector/index.ts
+index b3a7d6d8d7eb7b3c02189a35b780091eb699549e..c43859a30a293884b70f00a8cb4866cf9e3ce0c8 100644
+--- a/src/connector/index.ts
++++ b/src/connector/index.ts
+@@ -132,6 +132,7 @@ export class WebComponentConnector extends LitElement {
+     }
+     if (
+       changedProperties.has("client") &&
++      this.client &&
+       !(this.client instanceof ClientWithFeeRate)
+     ) {
+       this.requestClientWithFeeRate();
+diff --git a/src/signers/index.ts b/src/signers/index.ts
+index b0e23168346287900e4a69aa78ca9261a0d04dc7..d44a382f120ffc249acb9c5f7e59cfaeef4f82e8 100644
+--- a/src/signers/index.ts
++++ b/src/signers/index.ts
+@@ -21,5 +21,8 @@ export class SignersController {
+   refresh() {
+     const refreshId = ++this.refreshId;
++    if (!this.host.client) {
++      return Promise.resolve();
++    }
+     return this.host.signersController.refresh(
+       this.host.client,
+       (wallets) => {

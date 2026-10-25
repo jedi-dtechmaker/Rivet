@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "postinstall": "prisma generate",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "tsx --test tests/*.test.cjs",
+    "cota:sponsor": "node scripts/cota-sponsor.mjs",
+    "identity:setup": "node scripts/setup-identity.mjs",
+    "cota:setup": "node scripts/setup-cota-records.mjs",
+    "workers:setup": "node scripts/setup-worker-dispatch.mjs",
+    "release:setup": "pnpm run identity:setup && pnpm run cota:setup && pnpm run workers:setup"
   },
   "dependencies": {
     "@ckb-ccc/connector-react": "^2.1.4",
@@ -17,20 +23,21 @@
     "dotenv": "^18.0.0",
     "lucide-react": "^0.460.0",
     "merkletreejs": "^0.6.0",
-    "next": "^14.2.0",
+    "next": "15.5.28",
     "next-auth": "^4.24.15",
     "pg": "^8.23.0",
     "pinata-web3": "^0.5.4",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.23.1",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "prisma": "5.14.0",
+    "tsx": "4.21.0",
     "typescript": "^5.6.0"
   }
 }

@@ -51,13 +51,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       # Must run before the token is used anywhere, so it never lands in a log.
       - name: Mask the user token
+        env:
+          USER_GITHUB_TOKEN: ${{ inputs.githubToken }}
+          BACKUP_ENCRYPTION_KEY: ${{ inputs.encryptionKey }}
         run: |
-          echo "::add-mask::${{ inputs.githubToken }}"
-          if [ -n "${{ inputs.encryptionKey }}" ]; then echo "::add-mask::${{ inputs.encryptionKey }}"; fi
+          echo "::add-mask::$USER_GITHUB_TOKEN"
+          if [ -n "$BACKUP_ENCRYPTION_KEY" ]; then echo "::add-mask::$BACKUP_ENCRYPTION_KEY"; fi
 
       - name: Run restore worker
         working-directory: apps/web

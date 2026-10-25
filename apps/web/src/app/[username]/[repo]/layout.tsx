@@ -6,11 +6,12 @@ import styles from './layout.module.css';
 
 export default async function RepoLayout({
   children,
-  params,
+  params: pendingParams,
 }: {
   children: React.ReactNode;
-  params: { username: string; repo: string };
+  params: Promise<{ username: string; repo: string }>;
 }) {
+  const params = await pendingParams;
   const basePath = `/${params.username}/${params.repo}`;
   const fullName = `${params.username}/${params.repo}`;
   

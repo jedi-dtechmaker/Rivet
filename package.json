@@ -2,6 +2,7 @@
   "name": "proof",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.4.2",
   "description": "PROOF — Provable Repository of Open & Onchain Files",
   "scripts": {
     "dev": "pnpm --filter @proof/web dev",
@@ -21,8 +22,8 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=9.0.0"
+    "node": "24.x",
+    "pnpm": "12.4.x"
   },
   "devDependencies": {
     "netlify-cli": "^27.8.0",

@@ -4,11 +4,33 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+export function databaseConnectionUrl(value: string) {
+  const url = new URL(value);
+  if (!url.searchParams.has('connect_timeout')) url.searchParams.set('connect_timeout', '15');
+  if (!url.searchParams.has('pool_timeout')) url.searchParams.set('pool_timeout', '15');
+  return url.toString();
+}
+
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient();
+  new PrismaClient(process.env.DATABASE_URL ? {
+    datasources: { db: { url: databaseConnectionUrl(process.env.DATABASE_URL) } },
+  } : undefined);
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+export async function readWithConnectionRetry<Result>(query: () => Promise<Result>): Promise<Result> {
+  try {
+    return await query();
+  } catch (error) {
+    const unreachable = error && typeof error === 'object' && (
+      ('code' in error && error.code === 'P1001') ||
+      ('errorCode' in error && error.errorCode === 'P1001')
+    );
+    if (!unreachable) throw error;
+    return query();
+  }
+}
 
 export const db = {
   /**
@@ -59,6 +81,7 @@ export const db = {
    * Find a user by their GitHub username (handle)
    */
   async findUserByUsername(username: string) {
+    if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(username)) return null;
     return prisma.user.findFirst({
       where: { githubUsername: username },
       include: {
@@ -73,9 +96,9 @@ export const db = {
    * Find a user by their githubId
    */
   async findUserByGithubId(githubId: string) {
-    return prisma.user.findUnique({
+    return readWithConnectionRetry(() => prisma.user.findUnique({
       where: { githubId }
-    });
+    }));
   },
 
   /**
@@ -99,10 +122,10 @@ export const db = {
    * Find repositories by User ID (the UUID, not githubId)
    */
   async findReposByUserId(userId: string) {
-    return prisma.repository.findMany({
+    return readWithConnectionRetry(() => prisma.repository.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' }
-    });
+    }));
   },
 
   /**

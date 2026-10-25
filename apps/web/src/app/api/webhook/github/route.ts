@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { db } from '@/lib/db';
+import { db, prisma } from '@/lib/db';
 import { dispatchBackup, isValidRepoFullName } from '@/lib/backupDispatch';
+import { PRIVATE_BACKUP_MESSAGE, readPublicRepository } from '@/lib/public-repository';
 
 /**
  * GitHub push webhook handler.
@@ -11,10 +12,8 @@ import { dispatchBackup, isValidRepoFullName } from '@/lib/backupDispatch';
  * serverless functions have no `git` binary.
  */
 
-const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || '';
-
-function signatureMatches(provided: string, rawBody: string): boolean {
-  const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
+function signatureMatches(provided: string, rawBody: string, secret: string): boolean {
+  const hmac = crypto.createHmac('sha256', secret);
   const expected = 'sha256=' + hmac.update(rawBody).digest('hex');
   const a = Buffer.from(provided);
   const b = Buffer.from(expected);
@@ -26,14 +25,15 @@ export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
     const signature = req.headers.get('x-hub-signature-256');
+    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
 
     // Fail closed: without a secret we cannot trust the payload.
-    if (!WEBHOOK_SECRET) {
+    if (!webhookSecret) {
       console.error('[webhook] GITHUB_WEBHOOK_SECRET is not configured');
       return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
     }
 
-    if (!signature || !signatureMatches(signature, rawBody)) {
+    if (!signature || !signatureMatches(signature, rawBody, webhookSecret)) {
       console.error('[webhook] Signature mismatch or missing');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -45,37 +45,15 @@ export async function POST(req: NextRequest) {
 
     const payload = JSON.parse(rawBody);
     const repoFullName = payload?.repository?.full_name;
-    const githubId = payload?.sender?.id?.toString();
-
-    if (!isValidRepoFullName(repoFullName) || !githubId) {
+    if (!isValidRepoFullName(repoFullName)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    // Resolve the owning user.
-    let user = await db.findUserByGithubId(githubId);
-    if (!user) {
-      // Single-tenant/demo fallback: the push may come from a collaborator.
-      user = await db.findFirstUser();
-    }
-
-    if (!user) {
-      console.log(`[webhook] Ignoring push for ${repoFullName}: user not tracked.`);
-      return NextResponse.json({ message: 'Not tracked' });
-    }
-
     const existingRepo = await db.findRepo(repoFullName);
-    if (!existingRepo) {
-      await db.createRepo({
-        githubRepoId: repoFullName,
-        name: repoFullName.split('/')[1],
-        fullName: repoFullName,
-        isBackedUp: false,
-        isPrivate: Boolean(payload?.repository?.private),
-        lastBackupCid: '',
-        ckbTxHash: '',
-        userId: user.id,
-      });
-    }
+    if (!existingRepo) return NextResponse.json({ message: 'Repository is not registered. Start its first backup from the dashboard.' });
+    if (payload?.repository?.private !== false || existingRepo.isPrivate) return NextResponse.json({ error: PRIVATE_BACKUP_MESSAGE }, { status: 403 });
+    const user = await prisma.user.findUnique({ where: { id: existingRepo.userId } });
+    if (!user) return NextResponse.json({ message: 'Repository account not found.' });
 
     if (!user.autoSync) {
       console.log(
@@ -84,12 +62,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Auto-Sync is disabled' });
     }
 
+    const access = await readPublicRepository(repoFullName);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
     console.log(`[webhook] Dispatching backup worker for ${repoFullName} ...`);
     // Pass the anchor cell outpoint so auto-sync reuses the repo's existing cell
     // instead of creating a new one on every push.
     const result = await dispatchBackup(
       repoFullName,
-      undefined,
+      user.id,
       existingRepo?.ckbCellOutpoint ?? undefined,
     );
 

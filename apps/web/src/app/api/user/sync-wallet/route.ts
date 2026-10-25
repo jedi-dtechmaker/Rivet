@@ -1,94 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { Prisma } from '@prisma/client';
 import { authOptions } from '@/lib/auth';
 import { prisma, db } from '@/lib/db';
+import { verifyWalletProof } from '@/lib/wallet-proof';
+import { walletRequestOrigin } from '@/lib/wallet-request';
 
-/**
- * Links the signed-in GitHub account to a CKB address.
- *
- * The address can come from any lock CCC exposes — JoyID (passkey), OmniLock
- * via MetaMask/EVM, OmniLock via a Bitcoin wallet, Nostr, or a native secp256k1
- * CKB wallet. Rivet never needs the user's key: anchoring is sponsored by the
- * Rivet treasury, so linking a wallet is about identity and ownership, not
- * custody.
- */
-
-// Bech32 CKB addresses: ckb1... on mainnet, ckt1... on testnet.
-const CKB_ADDRESS_PATTERN = /^(ckb|ckt)1[02-9ac-hj-np-z]+$/;
-
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    const githubId = (session?.user as any)?.id as string | undefined;
-
-    if (!session || !githubId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await req.json().catch(() => ({}));
-    const ckbAddress: unknown = body?.ckbAddress;
-
-    if (!ckbAddress || typeof ckbAddress !== 'string') {
-      return NextResponse.json({ error: 'Missing ckbAddress' }, { status: 400 });
-    }
-
-    if (!CKB_ADDRESS_PATTERN.test(ckbAddress)) {
-      return NextResponse.json({ error: 'Invalid CKB address' }, { status: 400 });
-    }
-
-    const user = await db.findUserByGithubId(githubId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // ckbAddress is @unique, so guard against stealing another account's link.
-    const existing = await prisma.user.findUnique({ where: { ckbAddress } });
-    if (existing && existing.id !== user.id) {
-      return NextResponse.json(
-        { error: 'That wallet is already linked to a different Rivet account' },
-        { status: 409 },
-      );
-    }
-
-    if (user.ckbAddress === ckbAddress) {
-      return NextResponse.json({ success: true, updated: false, ckbAddress });
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { ckbAddress },
-    });
-
-    return NextResponse.json({ success: true, updated: true, ckbAddress });
-  } catch (error) {
-    console.error('[sync-wallet] Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await db.findUserByGithubId(session.user.id);
+  if (!user) return NextResponse.json({ error: 'Account not found.' }, { status: 404 });
+  return NextResponse.json({
+    address: user.ckbAddress,
+    verified: !!user.ckbAddressVerifiedAt,
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
-/** Unlink the wallet from the signed-in account. */
-export async function DELETE() {
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Sign in with GitHub first.' }, { status: 401 });
+  try { walletRequestOrigin(req); }
+  catch { return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 }); }
+
   try {
-    const session = await getServerSession(authOptions);
-    const githubId = (session?.user as any)?.id as string | undefined;
-
-    if (!session || !githubId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = await req.json();
+    if (typeof body.challengeId !== 'string') {
+      return NextResponse.json({ error: 'A wallet ownership challenge is required.' }, { status: 400 });
+    }
+    const user = await db.findUserByGithubId(session.user.id);
+    if (!user) return NextResponse.json({ error: 'Account not found.' }, { status: 404 });
+    const challenge = await prisma.walletChallenge.findUnique({ where: { userId: user.id } });
+    if (!challenge || challenge.id !== body.challengeId || challenge.expiresAt <= new Date()) {
+      return NextResponse.json({ error: 'Wallet verification expired. Please retry.' }, { status: 400 });
+    }
+    if (!(await verifyWalletProof(challenge.message, challenge.address, body.proof))) {
+      return NextResponse.json({ error: 'Could not verify ownership of this wallet.' }, { status: 400 });
     }
 
-    const user = await db.findUserByGithubId(githubId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { ckbAddress: null },
+    await prisma.$transaction(async transaction => {
+      await transaction.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(7824101)`;
+      const registration = await transaction.cotaRegistration.findUnique({ where: { userId: user.id } });
+      if (registration && registration.address !== challenge.address) throw new Error('Identity wallet cannot be replaced.');
+      const consumed = await transaction.walletChallenge.deleteMany({
+        where: { id: challenge.id, userId: user.id, expiresAt: { gt: new Date() } },
+      });
+      if (consumed.count !== 1) throw new Error('Wallet verification expired.');
+      await transaction.user.update({
+        where: { id: user.id },
+        data: { ckbAddress: challenge.address, ckbAddressVerifiedAt: new Date() },
+      });
     });
-
-    return NextResponse.json({ success: true, unlinked: true });
+    return NextResponse.json({ success: true, address: challenge.address, verified: true });
   } catch (error) {
-    console.error('[sync-wallet] Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'This wallet is already linked to another Rivet account.' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Wallet verification could not finish. Please retry.' }, { status: 503 });
   }
 }

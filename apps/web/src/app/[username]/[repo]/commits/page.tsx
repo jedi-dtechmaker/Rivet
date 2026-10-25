@@ -19,7 +19,8 @@ function timeAgo(dateString: string) {
   return `${Math.floor(months / 12)} years ago`;
 }
 
-export default async function CommitsPage({ params }: { params: { username: string; repo: string } }) {
+export default async function CommitsPage({ params: pendingParams }: { params: Promise<{ username: string; repo: string }> }) {
+  const params = await pendingParams;
   const fullName = `${params.username}/${params.repo}`;
   const repo = await db.findRepo(fullName);
 
