@@ -84,6 +84,7 @@ async function run() {
   });
   if (!repositoryResponse.ok) throw new Error('Only public repositories can be backed up on testnet.');
   const repository = await repositoryResponse.json();
+  const githubNumericId = Number.isSafeInteger(repository.id) && repository.id > 0 ? String(repository.id) : undefined;
   if (repository.private !== false || repository.full_name?.toLowerCase() !== REPO_FULL_NAME.toLowerCase()) {
     throw new Error('Only public repositories can be backed up on testnet.');
   }
@@ -219,6 +220,7 @@ async function run() {
 
     await report({
       success: true,
+      ...(githubNumericId ? { githubNumericId } : {}),
       merkleRoot: `0x${merkleRoot}`,
       ipfsCid,
       ckbTxHash,

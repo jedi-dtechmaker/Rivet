@@ -67,9 +67,17 @@ test('the deployed JoyID and CoTA scripts accept signed proof anchoring and reje
     const changedRoot = transaction.clone();
     changedRoot.outputsData[0] = `0x02${'ab'.repeat(32)}`;
     assert.notEqual(execute(signTransaction(changedRoot), 'input.0.type'), 0);
-    const extension = extensionUpdate([], records.map(entry => ({ key: entry.key, value: commitmentValue(entry.record) })), records);
+    const backup = { key: commitmentKey('backup:generated/testing'), record: { kind: 'backup', version: 1, repository: 'generated/testing', merkleRoot: `0x${'ab'.repeat(32)}` } };
+    const smtRecords = [...records, backup];
+    const extension = extensionUpdate([], smtRecords.map(entry => ({ key: entry.key, value: commitmentValue(entry.record) })), smtRecords);
     const legacy = createRecordsTransaction(cell, extension.root, extension.witness);
     legacy.addCellDeps(dependencies);
-    assert.equal(execute(signTransaction(legacy), 'input.0.lock'), 16);
+    for (const action of ['f0', 'f1']) {
+      const attempt = legacy.clone();
+      attempt.setWitnessArgs(0, { inputType: `0x${action}${extension.witness.slice(4)}` });
+      const approved = signTransaction(attempt);
+      assert.equal(execute(approved, 'input.0.type'), 0, `CoTA accepts extension action ${action}`);
+      assert.equal(execute(approved, 'input.0.lock'), 16, `JoyID rejects extension action ${action}`);
+    }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

@@ -22,6 +22,8 @@ model User {
   walletChallenge WalletChallenge?
   cotaRegistration CotaRegistration?
   cotaUpdates     CotaUpdate[]
+  cotaManifestOperations CotaManifestOperation[]
+  cotaManifestEnrollment CotaManifestEnrollment?
   workerDispatches WorkerDispatch[]
 }
 
@@ -51,6 +53,7 @@ model CotaRegistration {
 model Repository {
   id              String   @id @default(uuid())
   githubRepoId    String   @unique
+  githubNumericId String?  @unique
   name            String
   fullName        String
   isBackedUp      Boolean  @default(false)
@@ -102,4 +105,90 @@ model WorkerDispatch {
 
   @@index([userId, createdAt])
   @@index([createdAt])
+}
+
+// One reservation for an actual CoTA cell, shared by all publication protocols.
+// A lease can replace only an unpublished build. Accepted bytes retain the
+// reservation through broadcast uncertainty until a confirmed successor exists.
+model PublicationStream {
+  id              String   @id @default(uuid())
+  network         String
+  cotaScriptHash  String
+  revision        Int      @default(0)
+  headOutpoint    String?
+  reservationId   String?  @unique
+  reservedUntil   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  operations      CotaManifestOperation[]
+
+  @@unique([network, cotaScriptHash])
+}
+
+model CotaManifestOperation {
+  id                    String   @id @default(uuid())
+  userId                String?
+  streamId              String
+  protocol              String   @default("cota-manifest-v1")
+  kind                  String
+  sourceOutpoint        String
+  revision              Int
+  snapshot              Json
+  unsignedTransaction   Json?
+  serializedUnsignedTransaction String?
+  planDigest            String?
+  plan                  Json?
+  root                  String?
+  previousRoot          String?
+  txHash                String?
+  status                String
+  acceptedAttemptId     String?  @unique
+  confirmedTransaction  Json?
+  diagnostics           Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  stream                PublicationStream @relation(fields: [streamId], references: [id], onDelete: Restrict)
+  attempts              CotaManifestSignedAttempt[]
+
+  @@index([userId, createdAt])
+  @@index([streamId, createdAt])
+}
+
+model CotaManifestSignedAttempt {
+  id                    String   @id @default(uuid())
+  operationId           String
+  digest                String
+  signedTransaction     Json
+  serializedTransaction String
+  txHash                String
+  preflight             String   @default("pending")
+  diagnostics           Json?
+  status                String   @default("validating")
+  firstBroadcastAt      DateTime?
+  lastBroadcastAt       DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  operation             CotaManifestOperation @relation(fields: [operationId], references: [id], onDelete: Restrict)
+
+  @@unique([operationId, digest])
+  @@index([operationId, createdAt])
+}
+
+// Issuer-authenticated binding of an immutable GitHub account/wallet to its
+// designated pair. Token identifiers are retained across retries and snapshots.
+model CotaManifestEnrollment {
+  userId              String   @id
+  ownerLockHash       String
+  issuerLockHash      String
+  collectionId        String
+  tokenIndexes        Json
+  issuanceOperationId String?  @unique
+  issuanceTxHash      String?
+  initialManifest     Json
+  status              String
+  claimTxHash         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 }

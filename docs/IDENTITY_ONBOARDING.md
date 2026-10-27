@@ -16,6 +16,8 @@ The installed CCC connector includes a [startup patch](../patches/README.md) so 
 
 Disconnecting the wallet ends the browser connection and preserves the verified identity and registration. Reconnect the same wallet to continue. Replacing a wallet after registration is deliberately blocked until a migration/recovery flow is implemented.
 
+For the standard metadata issuance, JoyID claim, and atomic manifest update candidate, follow the [CoTA manifest acceptance runbook](./COTA_MANIFEST_RUNBOOK.md). Its issuer setup and live acceptance are tracked separately from the earlier signed-witness proof.
+
 ## Configuration and database
 
 ### Step-by-step sponsor setup
@@ -174,6 +176,23 @@ The currently incompatible builder uses the CoTA `0xF1` extension witness with s
 The signed-proof path supports one developer record and up to 127 public repository records. It preserves all existing CoTA data, including unknown wallet authorization or recovery entries. Use the primary JoyID passkey. Completed backup proofs can be synchronized later; ordinary GitHub backups do not require an immediate wallet signature. Unsupported legacy attempts appear as blocked and cannot be rebroadcast through the records API.
 
 The contract regression test executes the new builder's transaction against the deployed JoyID and CoTA binaries using a generated test passkey. Both scripts return 0; an altered witness fails JoyID validation, a changed CoTA root fails type validation, and the legacy extension reproduces JoyID error 16. Enable this optional test with `RIVET_CKB_DEBUGGER` set to the CKB debugger executable and `RIVET_CKB_FIXTURE` set to a debugger fixture containing the deployed dependencies and a CoTA input. These checks do not substitute for the owner's live approval or testnet confirmation.
+
+#### Reproducing the compatibility blocker
+
+The fixture can now be reconstructed from public testnet data without application credentials, database access, or a wallet. From the repository root:
+
+```sh
+pnpm --filter @proof/web run cota:fixture --output /tmp/rivet-cota-fixture.json
+RIVET_CKB_DEBUGGER=/path/to/ckb-debugger \
+RIVET_CKB_FIXTURE=/tmp/rivet-cota-fixture.json \
+pnpm --filter @proof/web exec tsx --test tests/identity-proof-contract.test.cjs tests/cota-smt.test.cjs
+```
+
+Use the official [CKB debugger release](https://github.com/nervosnetwork/ckb-standalone-debugger/releases) for your platform and verify its published SHA-256 before execution. The October 27 run used v1.1.1 on Linux x86-64. Download the debugger outside the repository; binaries and the generated fixture are not application dependencies.
+
+The downloader defaults to the confirmed signed-proof transaction above. It retrieves its input and all code/dependency-group cells from committed transactions, including the consumed registration output. It requires a testnet JoyID-owned CoTA input with an empty SMT, refuses existing output files, and does not load `.env` files. Optional `--rpc` and `--transaction` flags select another HTTP endpoint or compatible public transaction. The historical input is a local simulation fixture, not a spendable input for another live transaction.
+
+October 27 verification: five tests passed with none skipped. With a freshly generated primary passkey, both `0xF0` and `0xF1` accept developer/public-backup commitments under the deployed CoTA type script (exit 0), but fail the deployed JoyID lock (exit 16). Signed-witness proofs pass both scripts; witness tampering and an unauthorized root change fail. No transaction was broadcast. This confirms the current custom extension cannot be enabled merely by changing the extension action. It does not establish a compatible replacement protocol or complete the SMT milestone. Keep the legacy submission path blocked until a candidate passes both deployed scripts and owner-approved testnet acceptance.
 
 - [x] Automated reconnect/repeated-activation, persistence, and retry checks.
 - [x] Validate SMT roots and witnesses against the deployed CoTA type script offline.

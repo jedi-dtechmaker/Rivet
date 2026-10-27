@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 const POLL_INTERVAL_MS = 5000;
 const MAX_WAIT_MS = 15 * 60 * 1000;
 
-export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName: string, isPrivate?: boolean }) {
+export function BackupButton({ repoFullName, isPrivate = false, refresh = false }: { repoFullName: string, isPrivate?: boolean, refresh?: boolean }) {
   const [status, setStatus] = useState<'idle' | 'backing_up' | 'backed_up'>('idle');
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
@@ -163,7 +163,7 @@ export function BackupButton({ repoFullName, isPrivate = false }: { repoFullName
         className="btn btn--secondary"
         style={{ padding: '4px 12px', fontSize: '12px' }}
       >
-        Backup Now
+        {refresh ? 'Refresh backup' : 'Backup Now'}
       </button>
 
       {/* Premium Error Modal Overlay */}

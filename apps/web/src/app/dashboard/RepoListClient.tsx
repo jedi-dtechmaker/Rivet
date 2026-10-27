@@ -159,6 +159,7 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
                {repo.backupStatus === 'backed_up' ? (
                  <div className={styles.footer_backup}>
                    Secured: {repo.lastBackup}
+                   {!repo.deletedOnGithub && !repo.isPrivate && <BackupButton repoFullName={repo.fullName} refresh />}
                  </div>
                ) : repo.backupStatus === 'pending' ? (
                  <BackupButton repoFullName={repo.fullName} isPrivate={repo.isPrivate} />

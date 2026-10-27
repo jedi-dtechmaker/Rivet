@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     if (body.action === 'prepare') {
+      if (process.env.COTA_MANIFEST_ENABLED === 'true') {
+        return NextResponse.json({ error: 'Use the CoTA manifest flow to store new records in your CoTA tree. Earlier signed-witness proofs remain available.' }, { status: 409 });
+      }
       if (body.protocol !== undefined && body.protocol !== WITNESS_PROTOCOL) {
         return NextResponse.json({ error: 'Choose signed proof anchoring to prepare a new transaction.' }, { status: 400 });
       }

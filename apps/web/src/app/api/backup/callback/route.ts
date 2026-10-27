@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       ipfsCid,
       ckbTxHash,
       ckbCellOutpoint,
+      githubNumericId,
       commitsProcessed,
       encryptionKey,
       encryptionIv,
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
       ipfsCid?: string;
       ckbTxHash?: string;
       ckbCellOutpoint?: string;
+      githubNumericId?: string;
       commitsProcessed?: number;
       encryptionKey?: string;
       encryptionIv?: string;
@@ -76,6 +78,9 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+    if (githubNumericId !== undefined && (typeof githubNumericId !== 'string' || !/^[1-9][0-9]{0,29}$/.test(githubNumericId))) {
+      return NextResponse.json({ error: 'Invalid immutable GitHub repository ID' }, { status: 400 });
+    }
 
     const existingRepo = await db.findRepo(repoFullName);
 
@@ -88,6 +93,7 @@ export async function POST(req: NextRequest) {
       isBackedUp: true,
       lastBackupCid: ipfsCid,
       ckbTxHash,
+      ...(githubNumericId ? { githubNumericId } : {}),
       ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
       ...(encryptionKey ? { encryptionKey } : {}),
       ...(encryptionIv ? { encryptionIv } : {}),

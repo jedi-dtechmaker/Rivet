@@ -15,5 +15,5 @@ export async function readPublicRepository(repoFullName: string, token?: string)
   if (repository.private !== false || typeof repository.full_name !== 'string' || repository.full_name.toLowerCase() !== repoFullName.toLowerCase()) {
     return { ok: false as const, status: 502, error: 'GitHub returned an invalid repository response.' };
   }
-  return { ok: true as const, repository: repository as { full_name: string; owner?: { id?: number }; permissions?: { push?: boolean; admin?: boolean } } };
+  return { ok: true as const, repository: repository as { id?: number; full_name: string; created_at?: string; owner?: { id?: number }; permissions?: { push?: boolean; admin?: boolean } } };
 }

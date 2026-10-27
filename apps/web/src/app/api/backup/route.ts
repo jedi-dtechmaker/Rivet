@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     const access = await readPublicRepository(repoFullName, session.accessToken);
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
     const githubRepo = access.repository;
+    const githubNumericId = Number.isSafeInteger(githubRepo.id) && githubRepo.id! > 0 ? String(githubRepo.id) : undefined;
     if (String(githubRepo.owner?.id) !== session.user.id && !githubRepo.permissions?.push && !githubRepo.permissions?.admin) {
       return NextResponse.json({ error: 'Choose a repository you own or have write access to.' }, { status: 403 });
     }
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
       update: {},
       create: {
         githubRepoId: repoFullName,
+        ...(githubNumericId ? { githubNumericId } : {}),
         fullName: repoFullName,
         name: repoFullName.split('/')[1],
         userId: user.id,

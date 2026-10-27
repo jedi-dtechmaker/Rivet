@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ccc } from '@ckb-ccc/connector-react';
 import { Shield, Wallet } from 'lucide-react';
+import { CotaManifest } from './CotaManifest';
 import styles from './WalletIdentity.module.css';
 
 type Registration = {
@@ -49,6 +50,7 @@ export function WalletIdentity() {
   const [recordsStatusError, setRecordsStatusError] = useState('');
   const [notice, setNotice] = useState('');
   const [recordsUpdate, setRecordsUpdate] = useState<RecordsUpdate | null>(null);
+  const [manifestEnabled, setManifestEnabled] = useState(false);
   const identityRequest = useRef<Promise<void> | null>(null);
   const recordsRequest = useRef<Promise<void> | null>(null);
   const approvedProof = useRef<{ id: string; transaction: ccc.TransactionLike } | null>(null);
@@ -109,6 +111,7 @@ export function WalletIdentity() {
   const verified = !!connectedAddress && identity?.verified && identity.address === connectedAddress;
   const isJoyId = signer?.signType === ccc.SignerSignType.JoyId && connectedAddress.startsWith('ckt1');
   const registered = !!identity?.registration;
+  const pendingWitnessProof = recordsUpdate?.status === 'prepared' && recordsUpdate.protocol === 'rivet-witness-v1';
 
   async function chooseJoyId() {
     setBusy(true);
@@ -218,8 +221,11 @@ export function WalletIdentity() {
         </p>
       )}
       {registrationStatus === 'confirmed' && (
-        <div>
-          <p>Signed proof anchoring publishes your developer identity and completed public backup proofs in an on-chain transaction approved by JoyID. It preserves your existing CoTA tree. The records will be public on testnet. Review the prepared fee before approving; a fee below 0.01 test CKB comes from your existing identity cell.</p>
+        <>
+          <CotaManifest signer={signer} verified={!!verified} isJoyId={!!isJoyId} disabled={busy} onBusyChange={setBusy} onEnabledChange={setManifestEnabled} />
+          <details>
+          <summary>Previous signed proof alternative</summary>
+          <p>Signed proof anchoring publishes your developer identity and completed public backup proofs in an on-chain transaction approved by JoyID. It preserves your existing CoTA tree and does not store the records in its SMT. The records will be public on testnet. Review the prepared fee before approving; a fee below 0.01 test CKB comes from your existing identity cell.</p>
           {recordsUpdate && <p role="status">
             {recordsUpdate.status === 'blocked' ? recordsUpdate.blockedReason : recordsUpdate.status === 'confirmed' ? 'Signed identity and backup proofs confirmed.' : recordsUpdate.status === 'submitted' ? 'Signed proofs awaiting confirmation.' : recordsUpdate.status === 'rejected' ? 'Identity update rejected. Contact Rivet before retrying.' : 'Signed proof prepared. Review the fee before approving in JoyID.'}
             {(recordsUpdate.status === 'confirmed' || recordsUpdate.status === 'submitted') && <>{' '}<a href={recordsUpdate.explorerUrl} target="_blank" rel="noreferrer">View records transaction</a></>}
@@ -233,10 +239,12 @@ export function WalletIdentity() {
           {recordsUpdate?.status === 'confirmed' && <p>{recordsUpdate.records.filter(entry => entry.record.kind === 'backup').length} public backup proof(s) committed.</p>}
           {recordsUpdate?.status === 'confirmed' && <a href="/api/user/cota/records" download="rivet-identity-proof.json">Download identity proof</a>}
           {connectedAddress && !verified && <p>Reconnect your verified identity wallet to update its records.</p>}
-          <button type="button" className="btn btn--primary" disabled={busy || !verified || !isJoyId || recordsUpdate?.status === 'rejected' || recordsUpdate?.status === 'submitted'} onClick={syncRecords}>
+          {manifestEnabled && !pendingWitnessProof && <p>Use the CoTA manifest above for new records. Earlier signed proofs remain available here.</p>}
+          {(!manifestEnabled || pendingWitnessProof) && <button type="button" className="btn btn--primary" disabled={busy || !verified || !isJoyId || recordsUpdate?.status === 'rejected' || recordsUpdate?.status === 'submitted'} onClick={syncRecords}>
             {busy ? 'Working…' : recordsUpdate?.status === 'prepared' && recordsUpdate.protocol === 'rivet-witness-v1' ? recordsUpdate.transaction && approvedProof.current?.id !== recordsUpdate.id ? 'Review and approve in JoyID' : 'Retry signed proof submission' : recordsUpdate?.status === 'confirmed' ? 'Sync signed identity proofs' : 'Prepare signed proof'}
-          </button>
-        </div>
+          </button>}
+          </details>
+        </>
       )}
       {notice && <p role="status">{notice}</p>}
       {(error || identityStatusError || recordsStatusError) && <p role="alert" className={styles.error}>{error || identityStatusError || recordsStatusError}</p>}

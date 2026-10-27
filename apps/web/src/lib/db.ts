@@ -143,6 +143,7 @@ export const db = {
     lastBackupCid: string;
     ckbTxHash: string;
     ckbCellOutpoint?: string;
+    githubNumericId?: string;
     encryptionKey?: string;
     encryptionIv?: string;
     userId: string;
