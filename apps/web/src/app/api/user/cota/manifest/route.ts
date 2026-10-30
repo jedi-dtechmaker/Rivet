@@ -1,3 +1,4 @@
+import { readWithConnectionRetry } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -20,7 +21,8 @@ function failure(error: unknown) {
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  try { return NextResponse.json(await getManifestState(session.user.id), { headers: { 'Cache-Control': 'no-store' } }); }
+  const githubId = session.user.id;
+  try { return NextResponse.json(await readWithConnectionRetry(() => getManifestState(githubId)), { headers: { 'Cache-Control': 'no-store' } }); }
   catch (error) { return failure(error); }
 }
 

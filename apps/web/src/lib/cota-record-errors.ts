@@ -9,7 +9,7 @@ export function cotaRecordFailure(error: unknown) {
     code, name: error instanceof Error ? error.name : undefined,
   };
   if (code === 'IDENTITY_FORMAT_UNSUPPORTED') return { status: 422, diagnostics, message: LEGACY_BLOCKED };
-  if (['P1001', 'P1002', 'P2024', 'P2028'].includes(String(code))) {
+  if (['P1001', 'P1002', 'P2024', 'P2028'].includes(String(code)) || /^(Connection terminated due to connection timeout|Connection terminated unexpectedly|timeout exceeded when trying to connect)$/.test(detail)) {
     return { status: 503, diagnostics, message: 'The database connection timed out. Your prepared proof is preserved. Retry approval or submission shortly.' };
   }
   let cause = fields.cause;

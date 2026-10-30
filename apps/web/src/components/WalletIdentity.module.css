@@ -44,3 +44,11 @@
 .error {
   color: var(--color-danger);
 }
+
+.active { display: inline-flex; align-items: center; gap: 6px; color: #80dfa3; background: #183a2870; border: 1px solid #397a50; border-radius: 999px; padding: 4px 10px; font-size: 12px; }
+.identityGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.identityGrid > section { min-width: 0; }
+.identityGrid > section > div:first-of-type { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.card > details { color: var(--color-text-secondary); font-size: var(--text-sm); }
+.card summary { cursor: pointer; }
+@media (max-width: 760px) { .identityGrid { grid-template-columns: minmax(0, 1fr); } }

@@ -6,6 +6,7 @@
   "description": "PROOF — Provable Repository of Open & Onchain Files",
   "scripts": {
     "dev": "pnpm --filter @proof/web dev",
+    "rivet": "node packages/cli/src/cli.mjs",
     "build": "pnpm --filter @proof/web build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",

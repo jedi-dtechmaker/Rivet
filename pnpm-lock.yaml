@@ -193,6 +193,12 @@ importers:
       '@ckb-ccc/core':
         specifier: ^1.21.0
         version: 1.21.0(typescript@5.9.3)(zod@4.6.6)
+      '@ckb-ccc/spore':
+        specifier: 1.6.12
+        version: 1.6.12(debug@4.4.3(supports-color@11.0.0))(supports-color@11.0.0)(typescript@5.9.3)(zod@4.6.6)
+      '@prisma/adapter-pg':
+        specifier: 5.14.0
+        version: 5.14.0(pg@8.23.0)
       '@prisma/client':
         specifier: 5.14.0
         version: 5.14.0(prisma@5.14.0)
@@ -251,6 +257,8 @@ importers:
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
+
+  packages/cli: {}
 
 packages:
 
@@ -2097,6 +2105,11 @@ packages:
     resolution: {integrity: sha512-bWLDlHsBlgKY/05wDN/V3ETcn5G2SV/SiA2ZmNvKGGlmVX4G5li7GRDhHcgYvHJHyJ8TUStqg2xtHmCs0UbAbg==}
     engines: {node: '>=18'}
 
+  '@prisma/adapter-pg@5.14.0':
+    resolution: {integrity: sha512-AcV1DKY4ps3zvBIKolCzmBD+resdG4oH14I0iG3SntMjjnCbC/COefIInSV038c8g20RoHJO7fPyf1WPKicRgQ==}
+    peerDependencies:
+      pg: ^8.11.3
+
   '@prisma/client@5.14.0':
     resolution: {integrity: sha512-akMSuyvLKeoU4LeyBAUdThP/uhVP3GuLygFE3MlYzaCb3/J8SfsYBE5PkaFuLuVpLyA6sFoW+16z/aPhNAESqg==}
     engines: {node: '>=16.13'}
@@ -2108,6 +2121,9 @@ packages:
 
   '@prisma/debug@5.14.0':
     resolution: {integrity: sha512-iq56qBZuFfX3fCxoxT8gBX33lQzomBU0qIUaEj1RebsKVz1ob/BVH1XSBwwwvRVtZEV1b7Fxx2eVu34Ge/mg3w==}
+
+  '@prisma/driver-adapter-utils@5.14.0':
+    resolution: {integrity: sha512-EyAfdKjk0M7CaA7BfiwDTPLs7udOwt+RUnyWIPSg7uBEFp2GS/l9Ig7CCgMZFcBFc62v0c6Z/R3WFuQ+bNxfnA==}
 
   '@prisma/engines-version@5.14.0-25.e9771e62de70f79a5e1c604a2d7c8e2a0a874b48':
     resolution: {integrity: sha512-ip6pNkRo1UxWv+6toxNcYvItNYaqQjXdFNGJ+Nuk2eYtRoEdoF13wxo7/jsClJFFenMPVNVqXQDV0oveXnR1cA==}
@@ -5647,6 +5663,10 @@ packages:
   postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
     engines: {node: '>=4'}
+
+  postgres-array@3.0.2:
+    resolution: {integrity: sha512-6faShkdFugNQCLwucjPcY5ARoW1SlbnrZjmGl0IrrqewpvxvhSLHimCVzqeuULCbG0fQv7Dtk1yDbG3xv7Veog==}
+    engines: {node: '>=12'}
 
   postgres-bytea@1.0.1:
     resolution: {integrity: sha512-5+5HqXnsZPE65IJZSMkZtURARZelel2oXUEO8rH83VS/hxH5vv1uHquPg5wZs8yMAfdv971IU+kcPUczi7NVBQ==}
@@ -9297,11 +9317,21 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@prisma/adapter-pg@5.14.0(pg@8.23.0)':
+    dependencies:
+      '@prisma/driver-adapter-utils': 5.14.0
+      pg: 8.23.0
+      postgres-array: 3.0.2
+
   '@prisma/client@5.14.0(prisma@5.14.0)':
     optionalDependencies:
       prisma: 5.14.0
 
   '@prisma/debug@5.14.0': {}
+
+  '@prisma/driver-adapter-utils@5.14.0':
+    dependencies:
+      '@prisma/debug': 5.14.0
 
   '@prisma/engines-version@5.14.0-25.e9771e62de70f79a5e1c604a2d7c8e2a0a874b48': {}
 
@@ -13539,6 +13569,8 @@ snapshots:
       source-map-js: 1.2.2
 
   postgres-array@2.0.0: {}
+
+  postgres-array@3.0.2: {}
 
   postgres-bytea@1.0.1: {}
 

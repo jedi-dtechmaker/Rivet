@@ -6,6 +6,7 @@ import styles from './page.module.css';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import ProfileRepoListClient from './ProfileRepoListClient';
+import { PublicIdentity } from '@/components/PublicIdentity';
 import CopyAddressClient from './CopyAddressClient';
 
 export default async function PublicProfilePage({ params: pendingParams }: { params: Promise<{ username: string }> }) {
@@ -63,7 +64,7 @@ export default async function PublicProfilePage({ params: pendingParams }: { par
             {securedRepos > 0 && (
               <span title="Secured Developer" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '12px', background: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 'bold' }}>
                 <ShieldCheck size={14} style={{ marginRight: '4px' }} />
-                Verified
+                Backed up
               </span>
             )}
           </h1>
@@ -95,6 +96,8 @@ export default async function PublicProfilePage({ params: pendingParams }: { par
           </div>
         )}
       </div>
+
+      {user.isProfilePublic && <PublicIdentity username={params.username} />}
 
       {/* Repositories Section */}
       <div className={styles.repos_section}>

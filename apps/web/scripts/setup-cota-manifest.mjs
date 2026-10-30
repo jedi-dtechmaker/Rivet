@@ -10,7 +10,7 @@ async function main() {
   const schema = new URL(process.env.DATABASE_URL).searchParams.get('schema') || 'public';
   const client = new PrismaClient();
   try {
-    const sql = await readFile(new URL('../prisma/cota-manifest.sql', import.meta.url), 'utf8');
+    const sql = await readFile(new URL('../prisma/cota-manifest.sql', import.meta.url), 'utf8') + '\n' + await readFile(new URL('../prisma/passport.sql', import.meta.url), 'utf8');
     await client.$transaction(async transaction => {
       await transaction.$executeRawUnsafe("SET LOCAL lock_timeout = '5s'");
       await transaction.$executeRawUnsafe("SET LOCAL statement_timeout = '20s'");

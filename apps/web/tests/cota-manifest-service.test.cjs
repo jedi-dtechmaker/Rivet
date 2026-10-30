@@ -13,7 +13,7 @@ test('unchanged confirmed manifests survive JSONB field reordering without reque
     const client = new ccc.ClientPublicTestnet();
     const signer = new ccc.SignerCkbPrivateKey(client, process.env.COTA_MANIFEST_ISSUER_PRIVATE_KEY);
     const issuer = (await signer.getRecommendedAddressObj()).script;
-    const user = { id: 'user', githubId: '1001', githubUsername: 'developer', ckbAddress: 'saved-verified-owner', ckbAddressVerifiedAt: new Date() };
+    const user = { id: 'user', githubId: '1001', githubUsername: 'developer', ckbAddress: ccc.Address.fromScript({ ...(await client.getKnownScript(ccc.KnownScript.JoyId)), args: `0x0001${'ab'.repeat(20)}` }, client).toString(), ckbAddressVerifiedAt: new Date() };
     const repo = { id: 'repo', githubNumericId: '2001', fullName: 'developer/repo', lastBackupCid: 'bafy-public',
       ckbCellOutpoint: `0x${'33'.repeat(32)}:0`, ckbTxHash: `0x${'33'.repeat(32)}`, commitCount: 1 };
     // PostgreSQL JSONB emits nested object properties in a different order.
@@ -24,15 +24,27 @@ test('unchanged confirmed manifests survive JSONB field reordering without reque
     globalThis.prisma = {
       user: { findUnique: async () => user },
       cotaRegistration: { findUnique: async () => ({ status: 'confirmed', address: user.ckbAddress }) },
-      cotaManifestEnrollment: { findUnique: async () => ({ status: 'claimed', issuerLockHash: issuer.hash(), collectionId: process.env.COTA_MANIFEST_COLLECTION_ID }) },
+      cotaManifestEnrollment: { findUnique: async () => ({ ownerLockHash: (await ccc.Address.fromString(user.ckbAddress, client)).script.hash(), status: 'claimed', issuerLockHash: issuer.hash(), collectionId: process.env.COTA_MANIFEST_COLLECTION_ID }) },
       cotaManifestOperation: { findFirst: async query => query.where.kind ? confirmed : null },
       repository: { findMany: async () => [repo] },
     };
-    const { getManifestState } = require('../src/lib/cota-manifest-service.ts');
+    const { getManifestState, prepareManifest } = require('../src/lib/cota-manifest-service.ts');
     const state = await getManifestState(user.githubId, client);
     assert.equal(state.nextStep, 'ready');
     assert.equal(state.hasChanges, false);
     assert.equal(state.operation, null);
+    // The POST path must also be a no-op: our fake DB has no stream,
+    // reservation, or create methods, and chain/aggregator requests must not run.
+    client.getTransaction = async () => { throw new Error('Unchanged sync touched the chain'); };
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => { throw new Error('Unchanged sync requested external proof'); };
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const repeated = await prepareManifest(user.githubId, undefined, client);
+        assert.equal(repeated.nextStep, 'ready');
+        assert.equal(repeated.operation, null);
+      }
+    } finally { globalThis.fetch = originalFetch; }
     // New backup contents still require approval even when the object keys match.
     repo.lastBackupCid = 'bafy-new-public';
     const changed = await getManifestState(user.githubId, client);

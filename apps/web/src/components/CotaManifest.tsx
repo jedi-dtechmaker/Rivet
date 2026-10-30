@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ccc } from '@ckb-ccc/connector-react';
+import { CheckCircle2 } from 'lucide-react';
 import styles from './CotaManifest.module.css';
+import { RefreshButton } from './RefreshButton';
 import { ManifestWaitError, waitForManifestStep } from '@/lib/cota-manifest-wait';
 
 type ManifestOperation = {
@@ -86,6 +88,9 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
     refresh().catch(failure => setError(failure.message));
   }, [refresh]);
   useEffect(() => () => activeWait.current?.abort(), []);
+  useEffect(() => {
+    if (signer && verified && isJoyId) refresh().catch(failure => setError(failure.message));
+  }, [signer, verified, isJoyId, refresh]);
 
   const operation = state?.operation;
   useEffect(() => {
@@ -167,18 +172,21 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
 
   return (
     <section className={styles.manifest} aria-labelledby="cota-manifest-title">
-      <h3 id="cota-manifest-title">Your CoTA manifest</h3>
-      <p className={styles.description}>Store a commitment to your developer identity and public backup proofs in your JoyID-owned CoTA tree. Rivet first issues two CoTA metadata NFT records containing your developer identity. Claim them with JoyID, then add completed public backup proofs through an approved update. GitHub backups continue without wallet approval.</p>
+      <h3 id="cota-manifest-title">Backup proofs</h3>
       {!state && !error && <p role="status">Loading CoTA manifest status…</p>}
       {state && !state.enabled && <p>CoTA manifest setup is not available yet. Your existing backups continue to work.</p>}
-      {state?.latest && <p>Public backups stored in Rivet: {state.latest.backupCount}.</p>}
+      {state?.latest && !state.confirmed && <p>{state.latest.backupCount} public backups ready.</p>}
       {state?.confirmed && (
         <div className={styles.review}>
-          <p>Backup proofs synced to CoTA: {state.confirmed.backupCount}.</p>
+          <p className={styles.success} role="status"><CheckCircle2 size={16} aria-hidden="true" /> {state.confirmed.backupCount} backup proof{state.confirmed.backupCount === 1 ? '' : 's'} synced</p>
+          {state.nextStep === 'ready' && !state.hasChanges && <span className={styles.success}>Up to date</span>}
+          {state.hasChanges && <p>New backup proofs are ready to sync. Review and approve the update with JoyID.</p>}
+          <details className={styles.details}><summary>Manifest details & proof</summary>
           <p className={styles.commitment}>Manifest commitment: {state.confirmed.root}</p>
           {state.hasChanges && <p>Your existing backups can be synced to this manifest. Sync verifies their saved references and asks for JoyID approval; it does not create another backup.</p>}
           {state.confirmed.explorerUrl && <a href={state.confirmed.explorerUrl} target="_blank" rel="noreferrer">View confirmed CoTA transaction</a>}
           {state.confirmed.exportUrl && <a href={state.confirmed.exportUrl} download="rivet-cota-manifest-proof.json">Download CoTA manifest proof</a>}
+          </details>
         </div>
       )}
       {requiresConsent && state?.enabled && (
@@ -187,7 +195,7 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
           <span>Create the two public CoTA metadata records for my developer identity. I will claim them with JoyID and add backup proofs through later updates.</span>
         </label>
       )}
-      {operation && (
+      {operation && operation.status !== 'confirmed' && (
         <div className={styles.review}>
           <p role="status">{operationMessage(operation)}</p>
           {operation.root && <p className={styles.commitment}>Prepared manifest commitment: {operation.root}</p>}
@@ -198,7 +206,7 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
       )}
       {state?.error && <p role="alert" className={styles.error}>{state.error}</p>}
       {!canUseWallet && <p>Connect your verified CKB testnet JoyID wallet to prepare or approve a CoTA manifest.</p>}
-      {notice && <p role="status">{notice}</p>}
+      {notice && !(state?.nextStep === 'ready' && !state.hasChanges) && <p role="status">{notice}</p>}
       {phase === 'wallet' && <p role="status">Waiting for JoyID approval. Check the JoyID popup or browser tab and complete the passkey prompt. If it is stuck, stop waiting and close that window before retrying.</p>}
       {phase === 'server' && <p role="status">Checking and submitting your saved transaction. You can refresh its status while this request finishes.</p>}
       {error && <p role="alert" className={styles.error}>{error}</p>}
@@ -215,7 +223,7 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
           </button>
         )}
         {phase === 'wallet' && <button type="button" className="btn btn--secondary" onClick={() => activeWait.current?.abort()}>Stop waiting</button>}
-        <button type="button" className="btn btn--secondary" disabled={disabled && !busy} onClick={() => refresh().catch(failure => setError(failure.message))}>Refresh manifest status</button>
+        <RefreshButton disabled={disabled && !busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />
       </div>
     </section>
   );

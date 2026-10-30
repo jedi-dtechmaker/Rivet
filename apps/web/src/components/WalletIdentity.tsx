@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ccc } from '@ckb-ccc/connector-react';
-import { Shield, Wallet } from 'lucide-react';
+import { Shield, Wallet, CheckCircle2 } from 'lucide-react';
+import { SovereignPassport } from './SovereignPassport';
+import { RefreshButton } from './RefreshButton';
 import { CotaManifest } from './CotaManifest';
 import styles from './WalletIdentity.module.css';
 
@@ -58,8 +60,8 @@ export function WalletIdentity() {
   const refresh = useCallback(() => {
     if (identityRequest.current) return identityRequest.current;
     identityRequest.current = Promise.all([
-      fetch('/api/user/sync-wallet', { cache: 'no-store' }).then(readResponse),
-      fetch('/api/user/cota', { cache: 'no-store' }).then(readResponse),
+      fetch('/api/user/sync-wallet', { cache: 'no-store', signal: AbortSignal.timeout(30000) }).then(readResponse),
+      fetch('/api/user/cota', { cache: 'no-store', signal: AbortSignal.timeout(30000) }).then(readResponse),
     ]).then(([wallet, cota]) => {
       setIdentity({ ...wallet, ...cota });
       setIdentityStatusError('');
@@ -205,16 +207,19 @@ export function WalletIdentity() {
       <div className={styles.heading}>
         <Shield size={22} aria-hidden="true" />
         <h2 id="identity-title">Your on-chain identity</h2>
+        {registrationStatus === 'confirmed' && <span className={styles.active} role="status"><CheckCircle2 size={14} aria-hidden="true" /> Active</span>}
         <span className={styles.badge}>Optional · Testnet</span>
       </div>
-      <p className={styles.description}>Connect JoyID on CKB testnet, then choose Activate identity to verify wallet ownership and create your CoTA identity. Rivet sponsors activation. Your GitHub backups work without a wallet.</p>
-      {connectedAddress && <p className={styles.address}>Connected wallet: {connectedAddress}</p>}
+      {registrationStatus !== 'confirmed' && <p className={styles.description}>Connect JoyID to activate your identity. Rivet covers activation; backups work without a wallet.</p>}
+      {connectedAddress && <details><summary>Wallet details</summary><p className={styles.address}>{connectedAddress}</p>
+        {registrationStatus === 'confirmed' && identity?.registration && <a href={identity.registration.explorerUrl} target="_blank" rel="noreferrer">Activation transaction ↗</a>}
+      </details>}
       {identity?.address && identity.address !== connectedAddress && (
         <p className={styles.address}>{identity.verified ? 'Identity wallet' : 'Previously saved wallet (verification required)'}: {identity.address}</p>
       )}
       {connectedAddress && !isJoyId && !registered && <p id="identity-wallet-help">Your connected wallet is not a CKB testnet JoyID wallet. Choose JoyID in the wallet picker to enable identity activation.</p>}
       {verified && !registered && <p>Wallet ownership verified.</p>}
-      {identity?.registration && (
+      {identity?.registration && registrationStatus !== 'confirmed' && (
         <p role="status">
           {registrationStatus === 'confirmed' ? 'CoTA identity active.' : registrationStatus === 'rejected' ? 'Activation was rejected. Contact Rivet with the transaction below.' : 'Identity activation is awaiting confirmation.'}
           {' '}<a href={identity.registration.explorerUrl} target="_blank" rel="noreferrer">View transaction</a>
@@ -222,7 +227,10 @@ export function WalletIdentity() {
       )}
       {registrationStatus === 'confirmed' && (
         <>
+          <div className={styles.identityGrid}>
+          <SovereignPassport signer={signer} verified={!!verified && !!isJoyId} disabled={busy} onBusyChange={setBusy} />
           <CotaManifest signer={signer} verified={!!verified} isJoyId={!!isJoyId} disabled={busy} onBusyChange={setBusy} onEnabledChange={setManifestEnabled} />
+          </div>
           <details>
           <summary>Previous signed proof alternative</summary>
           <p>Signed proof anchoring publishes your developer identity and completed public backup proofs in an on-chain transaction approved by JoyID. It preserves your existing CoTA tree and does not store the records in its SMT. The records will be public on testnet. Review the prepared fee before approving; a fee below 0.01 test CKB comes from your existing identity cell.</p>
@@ -263,7 +271,7 @@ export function WalletIdentity() {
           </>
         )}
         {registrationStatus === 'prepared' && <button type="button" className="btn btn--primary" disabled={busy} onClick={activate}>Retry activation</button>}
-        <button type="button" className="btn btn--secondary" disabled={busy} onClick={() => { setError(''); refresh().catch(failure => setError(failure.message)); }}>Refresh status</button>
+        <RefreshButton label="Refresh status" disabled={busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />
       </div>
     </section>
   );

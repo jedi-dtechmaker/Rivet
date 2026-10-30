@@ -3,7 +3,7 @@ const { afterEach, mock, test } = require('node:test');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 const { Prisma } = require('@prisma/client');
-const { db, prisma, databaseConnectionUrl } = require('../src/lib/db.ts');
+const { db, prisma, databaseConnectionUrl, readWithConnectionRetry } = require('../src/lib/db.ts');
 const DashboardError = require('../src/app/dashboard/error.tsx').default;
 
 const restorations = [];
@@ -89,4 +89,15 @@ test('the dashboard outage screen offers retry without claiming backups are pend
   assert.match(html, /Dashboard temporarily unavailable/);
   assert.match(html, /Try again/);
   assert.doesNotMatch(html, /Pending Backup|Backup Now|private-database|password/);
+});
+
+test('a dropped pg connection retries a saved-state read once without retrying schema or query errors', async () => {
+  for (const message of ['Connection terminated due to connection timeout', 'Connection terminated unexpectedly', 'timeout exceeded when trying to connect']) {
+    let attempts = 0;
+    const result = await readWithConnectionRetry(async () => { if (++attempts === 1) throw new Error(message); return 'saved-state'; });
+    assert.equal(result, 'saved-state'); assert.equal(attempts, 2);
+  }
+  let attempts = 0;
+  await assert.rejects(readWithConnectionRetry(async () => { attempts++; throw new Error('column missing'); }), /column missing/);
+  assert.equal(attempts, 1);
 });

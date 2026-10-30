@@ -48,3 +48,17 @@
 .error {
   color: var(--color-danger);
 }
+
+.success { display: inline-flex; align-items: center; gap: 8px; color: #80dfa3; font-size: var(--text-sm); }
+
+.passportLayout { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 28px; align-items: center; }
+.passportInfo { display: grid; gap: 16px; min-width: 0; }
+.details { min-width: 0; }
+.details summary { cursor: pointer; color: var(--color-text-secondary); padding: 12px 0; font-size: var(--text-sm); }
+.details[open] > summary { margin-bottom: 8px; }
+.stats { display: flex; flex-wrap: wrap; gap: 24px; }
+.stat { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-sm); }
+.stat strong { font-size: 28px; color: var(--color-text-primary, var(--color-text)); }
+.publicPanel { padding: 24px; border: 1px solid var(--color-border); background: var(--color-bg-secondary); margin: 24px 0; border-radius: 16px; display: grid; gap: 24px; }
+.publicPanel h2, .publicPanel h3, .publicPanel p { margin: 0; }
+@media (max-width: 700px) { .passportLayout { grid-template-columns: minmax(0, 1fr); } .publicPanel { padding: 16px; } }

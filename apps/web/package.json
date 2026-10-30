@@ -17,11 +17,13 @@
     "identity:setup": "node scripts/setup-identity.mjs",
     "cota:setup": "node scripts/setup-cota-records.mjs",
     "workers:setup": "node scripts/setup-worker-dispatch.mjs",
-    "release:setup": "pnpm run identity:setup && pnpm run cota:setup && pnpm run workers:setup"
+    "release:setup": "pnpm run identity:setup && pnpm run cota:setup && pnpm run workers:setup && pnpm run cota:manifest:setup"
   },
   "dependencies": {
     "@ckb-ccc/connector-react": "^2.1.4",
     "@ckb-ccc/core": "^1.21.0",
+    "@ckb-ccc/spore": "1.6.12",
+    "@prisma/adapter-pg": "5.14.0",
     "@prisma/client": "5.14.0",
     "crypto-js": "^4.2.0",
     "dotenv": "^18.0.0",

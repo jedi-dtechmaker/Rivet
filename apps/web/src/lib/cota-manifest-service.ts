@@ -1,7 +1,7 @@
 import { ccc } from '@ckb-ccc/core';
 import { isDeepStrictEqual } from 'node:util';
 import { Prisma, CotaManifestOperation, CotaManifestEnrollment, User, Repository } from '@prisma/client';
-import { prisma } from './db';
+import { prisma, readWithConnectionRetry } from './db';
 import { createTestnetClient } from './ckb-server';
 import { cotaTypeForLock } from './cota';
 import { parseJoyIdAddress } from './wallet-proof';
@@ -22,9 +22,9 @@ const planOf = (operation: CotaManifestOperation) => operation.plan as unknown a
 type Snapshot = { owner: string; username: string; repositories: unknown[] };
 
 async function account(githubId: string) {
-  const user = await prisma.user.findUnique({ where: { githubId } });
+  const user = await readWithConnectionRetry(() => prisma.user.findUnique({ where: { githubId } }));
   if (!user?.ckbAddress || !user.ckbAddressVerifiedAt) throw new Error('Verify your JoyID wallet before preparing a CoTA manifest.');
-  const registration = await prisma.cotaRegistration.findUnique({ where: { userId: user.id } });
+  const registration = await readWithConnectionRetry(() => prisma.cotaRegistration.findUnique({ where: { userId: user.id } }));
   if (registration?.status !== 'confirmed' || registration.address !== user.ckbAddress) throw new Error('Activate your user-owned CoTA identity first.');
   return user;
 }
@@ -167,6 +167,13 @@ export async function prepareManifest(githubId: string, token?: string, client =
   }
   const kind = !enrollment ? 'issue' : enrollment.status === 'claimed' ? 'update' : 'claim';
   if (kind === 'update') await reconcileManifestBackups(user, await repositoriesFor(user.id), { database: prisma, client, token });
+  // Reconnects and repeated POSTs must be read-only when the confirmed
+  // snapshot already matches. Do this before cell lookup, stream reservation,
+  // proof generation, or any wallet transaction can be requested.
+  if (kind === 'update') {
+    const state = await getManifestState(githubId, client);
+    if (state.nextStep === 'ready' && !state.hasChanges && !state.operation) return state;
+  }
   const cell = await confirmedCotaCell(kind === 'issue' ? issuer.lock : owner.script, client);
   const snapshot = snapshotOf(user, await repositoriesFor(user.id));
   await snapshotCheck(prisma, user, snapshot, true);

@@ -1,4 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+import { Socket } from 'node:net';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -11,11 +14,34 @@ export function databaseConnectionUrl(value: string) {
   return url.toString();
 }
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient(process.env.DATABASE_URL ? {
+export function createDatabaseClient() {
+  if (process.env.DATABASE_TRANSPORT && process.env.DATABASE_TRANSPORT !== 'pg') throw new Error('Unsupported database transport.');
+  if (process.env.DATABASE_TRANSPORT === 'pg') {
+    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required.');
+    const family = process.env.DATABASE_IP_FAMILY;
+    if (family && family !== '4' && family !== '6') throw new Error('DATABASE_IP_FAMILY must be 4 or 6.');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL, max: 4, connectionTimeoutMillis: 15000,
+      idleTimeoutMillis: 120000, allowExitOnIdle: true, keepAlive: true, keepAliveInitialDelayMillis: 10000,
+      ...(family ? { stream: () => {
+        const socket = new Socket();
+        const connect = socket.connect.bind(socket);
+        // pg still uses the original hostname for TLS/SNI and certificate checks.
+        // Only the underlying TCP address selection is constrained.
+        socket.connect = ((port: number, host: string) => connect({ port, host, family: Number(family) })) as typeof socket.connect;
+        return socket;
+      } } : {}),
+    });
+    pool.on('error', () => console.error('[database] An idle database connection closed.'));
+    const schema = new URL(process.env.DATABASE_URL).searchParams.get('schema') || 'public';
+    return new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
+  }
+  return new PrismaClient(process.env.DATABASE_URL ? {
     datasources: { db: { url: databaseConnectionUrl(process.env.DATABASE_URL) } },
   } : undefined);
+}
+
+export const prisma = globalForPrisma.prisma ?? createDatabaseClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
@@ -27,7 +53,9 @@ export async function readWithConnectionRetry<Result>(query: () => Promise<Resul
       ('code' in error && error.code === 'P1001') ||
       ('errorCode' in error && error.errorCode === 'P1001')
     );
-    if (!unreachable) throw error;
+    const pgConnectionFailure = error instanceof Error &&
+      /^(Connection terminated due to connection timeout|Connection terminated unexpectedly|timeout exceeded when trying to connect)$/.test(error.message);
+    if (!unreachable && !pgConnectionFailure) throw error;
     return query();
   }
 }

@@ -7,6 +7,7 @@ const { values } = parseArgs({ options: {
   transaction: { type: 'string', default: '0x2aa15bc36a911eb0f565a6b2820c4df8ebbf7ff2b73d4cc70d9ffa27bc4936d2' },
   output: { type: 'string' },
   'include-secp': { type: 'boolean', default: false },
+  'include-spore': { type: 'boolean', default: false },
 } });
 
 async function main() {
@@ -63,6 +64,14 @@ async function main() {
   // Add only public code dependencies for an offline application-owner simulation.
   // This modified transaction is a fixture, not another committed transaction.
   const fixtureTx = { ...tx, cell_deps: [...tx.cell_deps] };
+  if (values['include-spore']) {
+    const { ccc } = await import('@ckb-ccc/core');
+    const { getSporeScriptInfo } = await import('@ckb-ccc/spore');
+    const info = getSporeScriptInfo(new ccc.ClientPublicTestnet());
+    for (const { cellDep } of info.cellDeps) fixtureTx.cell_deps.push({
+      out_point: { tx_hash: cellDep.outPoint.txHash, index: `0x${cellDep.outPoint.index.toString(16)}` }, dep_type: cellDep.depType,
+    });
+  }
   if (values['include-secp']) {
     const secpGroup = { out_point: { tx_hash: '0xf8de3bb47d055cdf460d93a2a6e1b05f7432f9777c8c474abf4eec1d4aee5d37', index: '0x0' }, dep_type: 'dep_group' };
     if (!fixtureTx.cell_deps.some(dependency => dependency.out_point.tx_hash === secpGroup.out_point.tx_hash && BigInt(dependency.out_point.index) === 0n)) {
