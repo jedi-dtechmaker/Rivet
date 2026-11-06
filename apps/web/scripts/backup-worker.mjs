@@ -1,5 +1,5 @@
 /**
- * PROOF backup worker.
+ * Rivet backup worker.
  *
  * Runs inside GitHub Actions (which has the `git` binary, a writable disk and a
  * 60 minute budget) because Vercel serverless functions have none of those.

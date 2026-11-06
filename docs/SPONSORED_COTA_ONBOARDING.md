@@ -59,10 +59,10 @@ October 27, 2026 local result: 16 tests passed with none skipped, covering the n
 To reconstruct public dependencies and run the isolated check from the repository root:
 
 ```sh
-pnpm --filter @proof/web run cota:fixture --include-secp --output /tmp/rivet-sponsored-cota-fixture.json
+pnpm --filter @rivet/web run cota:fixture --include-secp --output /tmp/rivet-sponsored-cota-fixture.json
 RIVET_CKB_DEBUGGER=/path/to/ckb-debugger \
 RIVET_CKB_FIXTURE=/tmp/rivet-sponsored-cota-fixture.json \
-pnpm --filter @proof/web exec tsx --test tests/cota-hosted-contract.test.cjs tests/identity-proof-contract.test.cjs tests/cota-smt.test.cjs
+pnpm --filter @rivet/web exec tsx --test tests/cota-hosted-contract.test.cjs tests/identity-proof-contract.test.cjs tests/cota-smt.test.cjs
 ```
 
 Use an official [CKB debugger release](https://github.com/nervosnetwork/ckb-standalone-debugger/releases) and verify its checksum. The fixture command refuses to overwrite an existing file. Its `--include-secp` option adds public standard-lock dependencies to the simulation fixture; it does not modify the chain transaction. The contract tests simulate an already registered cell with generated keys and never use the real sponsor key or broadcast a transaction. Without the debugger/fixture environment variables, contract tests are skipped and must not be reported as verified.

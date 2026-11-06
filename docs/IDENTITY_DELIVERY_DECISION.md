@@ -74,7 +74,7 @@ October 27 local verification: the manifest contract test plus existing identity
 ```sh
 RIVET_CKB_DEBUGGER=/path/to/ckb-debugger \
 RIVET_CKB_FIXTURE=/tmp/rivet-sponsored-cota-fixture.json \
-pnpm --filter @proof/web exec tsx --test tests/cota-manifest-contract.test.cjs tests/identity-proof-contract.test.cjs tests/cota-smt.test.cjs tests/cota.test.cjs
+pnpm --filter @rivet/web exec tsx --test tests/cota-manifest-contract.test.cjs tests/identity-proof-contract.test.cjs tests/cota-smt.test.cjs tests/cota.test.cjs
 ```
 
 In the same implementation, test independent-cell concurrency, one reservation per cell across protocols, stale worker fencing, corrected signatures before broadcast, exact-byte retries after send uncertainty, and proof export from actual committed witnesses. Do not hold the global database lock while waiting for RPC.

@@ -1,5 +1,7 @@
 # Passport and onboarding acceptance
 
+Current status — November 6, 2026: the project owner confirmed completion of the hosted onboarding flow, real JoyID manifest update and passport mint, same-wallet reconnect and unchanged sync without an additional transaction or fee, same-mint refresh/retry, independent latest-manifest and current-owner verification, public/private profile checks, and consolidated evidence. Earlier hosted configuration issues are resolved. Milestone 1 implementation and project acceptance are complete; community/reviewer sign-off is requested in the [delivery report](./PROGRESS_UPDATE_2026-10-30.md). The procedures below remain available for reproduction and future regression checks.
+
 The Sovereign Passport is a plain Spore V2 digital object on CKB testnet with `application/json` content. It records the immutable GitHub ID, username attested in the verified CoTA snapshot, initial owner lock hash, manifest root, and manifest transaction. This is a Spore DOB with JSON content; it does not claim a DOB/0 DNA decoder, a DOB/1 image renderer, or a Bitcoin RGB++ binding. Ownership is the connected JoyID lock on CKB, as requested. See the [official CCC Spore guide](https://github.com/ckb-devrel/ccc/blob/master/packages/docs/content/docs/guides/spore-protocol.mdx).
 
 The user selected wallet funding for the passport. CoTA sponsorship remains separate. The dashboard shows the passport's locked capacity and transaction fee before JoyID approval. Only ordinary wallet capacity cells fund the mint; the CoTA cell, other typed assets, and cells containing data are excluded. Ensure the JoyID wallet holds enough **available test CKB** for the passport and change. Capacity depends on the serialized content and owner lock; a passport can require substantially more than the 150 CKB CoTA allocation. No treasury key funds this mint.
@@ -10,8 +12,8 @@ Run from the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm --filter @proof/web exec prisma generate
-pnpm --filter @proof/web run release:setup
+pnpm --filter @rivet/web exec prisma generate
+pnpm --filter @rivet/web run release:setup
 ```
 
 Setup is additive and does not mint or broadcast. `cota:manifest:setup` now includes `prisma/passport.sql`; apply it before enabling the new routes. Configure `PASSPORT_ENABLED=true` alongside the existing manifest issuer/collection configuration, then rebuild/restart the app. Keep environment files private. A production build does not apply database migrations.
@@ -44,16 +46,16 @@ Record the account, app version, date, explorer links, profile URL, and before/a
 7. Open the public profile signed out. Confirm the verified manifest root and backup count, passport Spore ID, linked-wallet ownership, and both transaction links. Set the profile private and confirm the public proof endpoint returns no identity. Restore visibility only if the owner chooses.
 8. Record all evidence and check the outstanding Milestone 1 acceptance items. Mark it complete only after the live demonstration and required reconnect checks pass.
 
-Live follow-up: the passport table is applied to the actual database, `PASSPORT_ENABLED=true` is set in the ignored runtime configuration, and the running app at `http://localhost:3000` includes the mint flow. The original pooler connection timed out; the optional `pg` adapter with `DATABASE_IP_FAMILY=4` and the direct endpoint of the same database restores application access while preserving TLS hostname checks. The real public identity API returns HTTP 200 and independently verifies Amentor-coder's confirmed manifest.
+Historical setup follow-up: the passport table was applied to the actual database, `PASSPORT_ENABLED=true` was set in the ignored runtime configuration, and the local app included the mint flow. The original pooler connection timed out; the optional `pg` adapter with `DATABASE_IP_FAMILY=4` and the direct endpoint of the same database restored application access while preserving TLS hostname checks. The public identity API returned HTTP 200 and independently verified the confirmed manifest. Current hosted acceptance is recorded above.
 
-The owner explicitly authorized a test-treasury top-up after the JoyID wallet was found to have no ordinary capacity cells. [Funding transaction](https://pudge.explorer.nervos.org/transaction/0x62a33ccb19c140b04910c232a42226749b1a60d029b1abaa454b88cd99424ca3) is confirmed and transfers 830 test CKB to the verified JoyID wallet. The calculated passport capacity is 759 CKB, with the remainder covering change and fees. The wallet still approves and funds the passport transaction. The real manifest has a newer completed backup to sync before unchanged acceptance. Real JoyID update/mint approvals and browser reconnect evidence remain pending; treasury funding is not passport mint evidence.
+The owner explicitly authorized a test-treasury top-up after the JoyID wallet was found to have no ordinary capacity cells. The confirmed [funding transaction](https://pudge.explorer.nervos.org/transaction/0x62a33ccb19c140b04910c232a42226749b1a60d029b1abaa454b88cd99424ca3) transferred 830 test CKB to the verified JoyID wallet. The wallet subsequently approved the [passport mint](https://pudge.explorer.nervos.org/transaction/0x541a6e1ff749dd56cf38fa5d6c7fdd69686868110e5c9ab8120cd3d4ca7eb3dc), locking 759 test CKB with a 0.00013595 test CKB fee. The [latest manifest update](https://pudge.explorer.nervos.org/transaction/0xb7f6c86d899794fd9534338ae77a280946e1d0f8dffef0d53ba099d3b60d4feb) includes the completed backup proof. The project owner confirmed the remaining live acceptance checks on November 6.
 
 ## Reproducible local verification
 
 Generate public script fixtures without application credentials or a broadcast:
 
 ```sh
-pnpm --filter @proof/web run cota:fixture --include-secp --include-spore --output /tmp/rivet-passport-fixture.json
+pnpm --filter @rivet/web run cota:fixture --include-secp --include-spore --output /tmp/rivet-passport-fixture.json
 cd apps/web
 RIVET_TEST_DATABASE_URL=DISPOSABLE_POSTGRES_URL \
 RIVET_CKB_DEBUGGER=/path/to/ckb-debugger \
@@ -62,4 +64,4 @@ RIVET_PASSPORT_FIXTURE=/tmp/rivet-passport-fixture.json \
 node --import tsx --test tests/*.test.cjs
 ```
 
-Use a disposable database with the Prisma schema applied. This session passed 190 web checks with none skipped, plus two CLI recovery checks. The tests include the real Spore/JoyID contract binaries with a generated passkey, owner/content tampering rejection, concurrent PostgreSQL signature acceptance, additive migration replay, private-profile suppression and CLI recovery-key isolation. TypeScript and the production build pass. Generated-passkey tests simulate the lock; they do not perform a real JoyID browser approval.
+Use a disposable database with the Prisma schema applied. The historical October 27 validation session passed 190 web checks with none skipped, plus two CLI recovery checks. Those tests include the real Spore/JoyID contract binaries with a generated passkey, owner/content tampering rejection, concurrent PostgreSQL signature acceptance, additive migration replay, private-profile suppression and CLI recovery-key isolation. TypeScript and the production build passed in that session. Generated-passkey tests simulate the lock; they do not perform a real JoyID browser approval. The November 6 live acceptance confirmation is separate from those automated results.

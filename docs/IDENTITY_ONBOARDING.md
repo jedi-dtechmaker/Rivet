@@ -29,7 +29,7 @@ Run these commands from the repository root:
 1. Create the sponsor locally:
 
    ```sh
-   pnpm --filter @proof/web run cota:sponsor create
+   pnpm --filter @rivet/web run cota:sponsor create
    ```
 
    The helper generates a secp256k1 key on your computer, saves it to `apps/web/.env.cota-sponsor.local` with owner-only permissions, and prints only the public `ckt1...` address. The file is ignored by Git. It refuses to overwrite an existing key file.
@@ -39,7 +39,7 @@ Run these commands from the repository root:
 3. Confirm which public address the configured key controls:
 
    ```sh
-   pnpm --filter @proof/web run cota:sponsor address
+   pnpm --filter @rivet/web run cota:sponsor address
    ```
 
    This command uses the key in `apps/web/.env` first, falling back to the generated local key file. Fund the address it prints.
@@ -49,7 +49,7 @@ Run these commands from the repository root:
 5. Wait for the faucet claim to be processed, then check the balance:
 
    ```sh
-   pnpm --filter @proof/web run cota:sponsor balance
+   pnpm --filter @rivet/web run cota:sponsor balance
    ```
 
    A typical registration reserves 150 CKB plus a small transaction fee. Keep additional capacity for the sponsor's change output. Set the sponsorship limit to 1 for the first live test.
@@ -82,7 +82,7 @@ If activation reports that the CoTA registry could not be reached, keep the veri
 
 CKB RPC calls on the server use the configured HTTP endpoint directly, with a 30-second total timeout, without the SDK's implicit WebSocket fallbacks. If dual-stack connection attempts repeatedly return `ETIMEDOUT` while IPv4 works, set `CKB_RPC_IP_FAMILY=4` in the server environment and restart the app. This bypasses IPv4/IPv6 connection selection for those RPC requests; leaving the setting empty uses Node's default address selection. The setting also accepts `6` for an IPv6 network. Status polling shares requests already in progress, so a slow request does not start overlapping copies. Once a registration is confirmed, loading activation status uses the saved confirmation rather than contacting the node again. Temporary status errors clear after a successful check; a transaction validation error remains visible for review. A genuine node or network outage can still return HTTP 503 and does not discard a saved update or signature.
 
-Duplicate `ccc-*` custom-element warnings can occur during Next.js development hot reload. They are separate from server RPC timeouts. Keep port 3000 for local OAuth and use `pnpm --filter @proof/web exec next build` to check a production build without running the database-mutating package build script.
+Duplicate `ccc-*` custom-element warnings can occur during Next.js development hot reload. They are separate from server RPC timeouts. Keep port 3000 for local OAuth and use `pnpm --filter @rivet/web exec next build` to check a production build without running the database-mutating package build script.
 
 ### Applying the schema
 
@@ -91,24 +91,24 @@ Apply the additive schema update before starting the updated app or signing in. 
 For an existing database, run this command from the repository root:
 
 ```sh
-pnpm --filter @proof/web run identity:setup
-pnpm --filter @proof/web exec prisma generate
+pnpm --filter @rivet/web run identity:setup
+pnpm --filter @rivet/web exec prisma generate
 ```
 
 The setup command loads `.env.local` and `.env`, adds the nullable verification timestamp and both identity tables in one transaction, and preserves existing data. It safely skips an already installed schema and stops if it detects a partial installation. Restart `pnpm dev` after setup, then retry GitHub sign-in. An error saying `User.ckbAddressVerifiedAt` does not exist means this update has not been applied to the database used by the app.
 
-For a fresh development database, use `pnpm --filter @proof/web exec prisma db push`.
+For a fresh development database, use `pnpm --filter @rivet/web exec prisma db push`.
 
-Regenerate the client with `pnpm --filter @proof/web exec prisma generate` after the schema is available locally. Code generation does not update the database.
+Regenerate the client with `pnpm --filter @rivet/web exec prisma generate` after the schema is available locally. Code generation does not update the database.
 
 If `DATABASE_URL` is already exported in your terminal and points to the intended existing development database, the additive SQL can be applied with:
 
 ```sh
 psql "$DATABASE_URL" --single-transaction --set ON_ERROR_STOP=1 --file apps/web/prisma/identity-onboarding.sql
-pnpm --filter @proof/web exec prisma generate
+pnpm --filter @rivet/web exec prisma generate
 ```
 
-Next.js loading a value from `.env` does not export that value into your terminal. The `identity:setup` command handles loading these files for you. Apply either `identity:setup`, the manual SQL upgrade, or `prisma db push` on a fresh development database. The package `build` script now only generates Prisma and builds Next.js; it does not update the database. For an existing deployment, run `pnpm --filter @proof/web run release:setup` once against its intended database before deploying these updates; this also installs persistent worker limits.
+Next.js loading a value from `.env` does not export that value into your terminal. The `identity:setup` command handles loading these files for you. Apply either `identity:setup`, the manual SQL upgrade, or `prisma db push` on a fresh development database. The package `build` script now only generates Prisma and builds Next.js; it does not update the database. For an existing deployment, run `pnpm --filter @rivet/web run release:setup` once against its intended database before deploying these updates; this also installs persistent worker limits.
 
 Set these server-side variables in the web deployment:
 
@@ -130,7 +130,7 @@ The PostgreSQL advisory lock serializes wallet linking and registration preparat
 
 ## Verification
 
-Run `pnpm --filter @proof/web test` for passkey signature, challenge binding, credential ownership, CoTA output ownership, capacity, full sponsor signing, and registry transaction checks. Default tests use generated keys and mocked services; they do not spend CKB. The PostgreSQL integration test is skipped unless `RIVET_TEST_DATABASE_URL` points to a disposable database with the identity schema applied. It replaces `DATABASE_URL` only inside its isolated test process and cleans up the users it creates.
+Run `pnpm --filter @rivet/web test` for passkey signature, challenge binding, credential ownership, CoTA output ownership, capacity, full sponsor signing, and registry transaction checks. Default tests use generated keys and mocked services; they do not spend CKB. The PostgreSQL integration test is skipped unless `RIVET_TEST_DATABASE_URL` points to a disposable database with the identity schema applied. It replaces `DATABASE_URL` only inside its isolated test process and cleans up the users it creates.
 
 Local verification completed on October 21, 2026: all 21 checks passed with a temporary PostgreSQL database, including simultaneous attempts to consume the same challenge and resending a persisted registration transaction after a broadcast failure. The additive SQL upgrade matched the Prisma schema with no differences, and the Next.js production build passed. No testnet transaction was broadcast.
 
@@ -150,8 +150,8 @@ Manual testnet acceptance:
 Run these additive setup commands before using record sync on another installation, then restart the app:
 
 ```sh
-pnpm --filter @proof/web run cota:setup
-pnpm --filter @proof/web exec prisma generate
+pnpm --filter @rivet/web run cota:setup
+pnpm --filter @rivet/web exec prisma generate
 ```
 
 The setup adds a `protocol` column to `CotaUpdate`. Existing attempts receive `cota-smt-v1`; the new opt-in path uses `rivet-witness-v1`. A unique index on account, source outpoint, and protocol allows a new signed-proof attempt to coexist with the incompatible CoTA extension attempt. Existing signatures, registrations, and backups are preserved. Setup uses the app's Prisma connection and applies its SQL in one transaction.
@@ -182,10 +182,10 @@ The contract regression test executes the new builder's transaction against the 
 The fixture can now be reconstructed from public testnet data without application credentials, database access, or a wallet. From the repository root:
 
 ```sh
-pnpm --filter @proof/web run cota:fixture --output /tmp/rivet-cota-fixture.json
+pnpm --filter @rivet/web run cota:fixture --output /tmp/rivet-cota-fixture.json
 RIVET_CKB_DEBUGGER=/path/to/ckb-debugger \
 RIVET_CKB_FIXTURE=/tmp/rivet-cota-fixture.json \
-pnpm --filter @proof/web exec tsx --test tests/identity-proof-contract.test.cjs tests/cota-smt.test.cjs
+pnpm --filter @rivet/web exec tsx --test tests/identity-proof-contract.test.cjs tests/cota-smt.test.cjs
 ```
 
 Use the official [CKB debugger release](https://github.com/nervosnetwork/ckb-standalone-debugger/releases) for your platform and verify its published SHA-256 before execution. The October 27 run used v1.1.1 on Linux x86-64. Download the debugger outside the repository; binaries and the generated fixture are not application dependencies.

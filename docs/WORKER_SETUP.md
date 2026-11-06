@@ -33,7 +33,7 @@ The dispatch token starts jobs in Rivet's repository. It does not replace the re
 
 ## Updating the existing deployment
 
-Run `pnpm --filter @proof/web run release:setup` against the intended deployment database before serving this update. Builds no longer change database schemas. This command installs the additive identity/proof schema and the `WorkerDispatch` table; repeat runs preserve existing records.
+Run `pnpm --filter @rivet/web run release:setup` against the intended deployment database before serving this update. Builds no longer change database schemas. This command installs the additive identity/proof schema and the `WorkerDispatch` table; repeat runs preserve existing records.
 
 Worker attempts are reserved under a PostgreSQL advisory lock before GitHub dispatch. Defaults are 10 attempts per account per rolling hour, 50 globally per rolling hour, and 200 globally per rolling day. Configure `RIVET_WORKER_USER_HOURLY_LIMIT`, `RIVET_WORKER_GLOBAL_HOURLY_LIMIT`, and `RIVET_WORKER_GLOBAL_DAILY_LIMIT` to change these budgets. Failed dispatches also consume an attempt to prevent retry loops from bypassing the budget. If quota storage is unavailable, dispatch stops. `RIVET_WORKERS_ENABLED=false` pauses new backup and restore dispatches without affecting saved proofs.
 

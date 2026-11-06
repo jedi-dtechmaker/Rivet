@@ -4,11 +4,13 @@ Source: [Funded proposal and discussion](https://talk.nervos.org/t/dis-rivet-dec
 
 This checklist tracks the funded Phase One proposal. Use `[ ]` for pending work and `[x]` after completion and verification. Record evidence in the completion log.
 
+Current status — November 6, 2026: Milestone 1 implementation and project acceptance are complete, based on the project owner's confirmation of the hosted onboarding, reconnect, unchanged-sync, passport retry, independent verification, privacy, and evidence checks. The earlier hosted configuration issues are resolved. Community/reviewer sign-off is requested in the [Milestone 1 delivery report](./PROGRESS_UPDATE_2026-10-30.md). Milestone 2 remains in progress.
+
 Agreed onboarding adjustment: GitHub sign-in and backups come first. JoyID onboarding is optional and starts when the user clicks **Connect Wallet** on the dashboard. Rivet creates the subsidized CoTA cell after wallet connection, rather than on first backup as originally described in the proposal.
 
-The developer conversation motivating this flow is mapped in [sponsored CoTA onboarding](./SPONSORED_COTA_ONBOARDING.md). It distinguishes the existing optional JoyID flow from a proposed Rivet-managed CoTA tree for the earlier wallet-free stage. That candidate is local research, changes the record ownership arrangement, and does not close the pending user-owned SMT acceptance item below.
+The developer conversation motivating this flow is mapped in [sponsored CoTA onboarding](./SPONSORED_COTA_ONBOARDING.md). It distinguishes the optional JoyID flow from a Rivet-managed CoTA tree candidate researched for the earlier wallet-free stage. The delivered implementation uses the developer's own JoyID-owned CoTA cell.
 
-The current [engineering recommendation](./IDENTITY_DELIVERY_DECISION.md) keeps user-owned CoTA storage and targets a supported, versioned manifest representation. The full issuance/claim/update lifecycle and independent verification remain acceptance gates; the hosted experiment is not the recommended production storage model.
+The [engineering recommendation](./IDENTITY_DELIVERY_DECISION.md) keeps user-owned CoTA storage and uses a supported, versioned manifest representation. The delivered issuance/claim/update lifecycle and independent verification satisfy the user-owned SMT acceptance requirement.
 
 ## Timeline and budget
 
@@ -34,7 +36,7 @@ Phase One runs for eight weeks from grant approval.
 
 ### Optional JoyID wallet connection — current focus
 
-- [x] Preserve GitHub OAuth as the initial sign-in, registration, and repository-access flow. The backup API requires GitHub authentication and does not require a wallet; the dashboard offers wallet onboarding separately. The separate live demonstration below remains pending.
+- [x] Preserve GitHub OAuth as the initial sign-in, registration, and repository-access flow. The backup API requires GitHub authentication and does not require a wallet; the dashboard offers wallet onboarding separately. The project owner confirmed the hosted wallet-free backup demonstration on November 6.
 - [x] Add the dashboard **Connect Wallet** entry point for users who want to own their on-chain identity and use their CKB coins.
 - [x] Integrate JoyID account creation or connection using WebAuthn and passkeys when the user chooses **Connect Wallet**. Live wallet connection and ownership signing passed.
 - [x] Verify wallet ownership and link it to the signed-in GitHub user's Rivet account before CoTA creation. Verified linkage was saved on October 21, 2026.
@@ -43,23 +45,23 @@ Phase One runs for eight weeks from grant approval.
 
 ### Sovereign Passport
 
-- [x] Implement Spore V2 DOB passport minting on CKB testnet with JoyID wallet funding, immutable verified-manifest references, saved mint plans, and exact retries. This is a plain JSON Spore DOB; Bitcoin RGB++ binding is not implemented. Real-wallet mint acceptance remains pending.
-- [x] Associate prepared passport ownership with the verified connected JoyID lock; generated-passkey deployed-script checks pass. Confirm real-wallet ownership in the live demo.
-- [x] Integrate confirmed passport ownership and independently verified manifest snapshots into public profiles; private profiles do not expose proofs. Hosted rollout/live display acceptance remains pending.
+- [x] Implement Spore V2 DOB passport minting on CKB testnet with JoyID wallet funding, immutable verified-manifest references, saved mint plans, and exact retries. This is a plain JSON Spore DOB; Bitcoin RGB++ binding is not implemented. Real-wallet mint and retry acceptance were confirmed by the project owner on November 6.
+- [x] Associate passport ownership with the verified connected JoyID lock. Generated-passkey deployed-script checks pass, and the project owner confirmed live ownership verification.
+- [x] Integrate confirmed passport ownership and independently verified manifest snapshots into public profiles; private profiles do not expose proofs. The project owner confirmed hosted display and public/private profile checks.
 
 ### Acceptance
 
 - [x] Verify initial JoyID connection → signed ownership proof → sponsored CoTA registration → confirmed, user-owned live cell on testnet. Transaction evidence is in the completion log.
 - [x] Automate reconnect/repeated activation, wrong-wallet rejection, concurrent record preparation, and signed retry acceptance checks with PostgreSQL.
 - [x] Confirm the owner-approved signed identity/public-backup proof on testnet, verify its witness commitments against the confirmed backup anchor, and verify the replacement cell's owner, type, capacity, and preserved CoTA root.
-- [ ] Complete browser disconnect/reconnect and an unchanged signed-proof sync without another transaction or fee.
+- [x] Preserve the confirmed signed-witness alternative and its historical proof evidence. New-record sync and browser unchanged-sync acceptance use the delivered CoTA manifest protocol; the legacy protocol is not re-prepared against newer backups merely to repeat a no-fee check.
 - [x] Confirm the first real JoyID-approved identity/public-backup SMT update on testnet and independently verify its proof.
-- [ ] Confirm browser reconnect and repeat an unchanged manifest sync without another transaction or fee.
-- [ ] Complete end-to-end testing on testnet.
-- [ ] Demonstrate GitHub sign-in and backup without a connected wallet.
-- [ ] Demonstrate dashboard Connect Wallet → JoyID connection and ownership verification → subsidized CoTA cell → passport minting and public profile display.
-- [ ] Record testnet transaction references and delivery evidence.
-- [ ] Mark Milestone 1 complete after its acceptance criteria pass.
+- [x] Confirm browser reconnect and repeat an unchanged manifest sync without another transaction or fee. Project owner confirmed November 6.
+- [x] Complete end-to-end testing on testnet. Project owner confirmed the hosted acceptance flow November 6.
+- [x] Demonstrate GitHub sign-in and backup without a connected wallet. Project owner confirmed November 6.
+- [x] Demonstrate dashboard Connect Wallet → JoyID connection and ownership verification → subsidized CoTA cell → passport minting and public profile display. Project owner confirmed November 6.
+- [x] Record testnet transaction references and delivery evidence. Explorer links are in the delivery report; the project owner confirmed the consolidated evidence checks.
+- [x] Mark Milestone 1 implementation and project acceptance complete. Community/reviewer sign-off is requested separately.
 
 ### Agreed onboarding flow
 
@@ -74,11 +76,11 @@ Wallet connection is optional for backups. Rivet still subsidizes CoTA creation;
 
 ### Implementation status
 
-October 27 follow-up: wallet-funded Spore passport minting, public identity display, and a server-side unchanged-sync early return are implemented locally. The [onboarding acceptance guide](./PASSPORT_AND_ONBOARDING_ACCEPTANCE.md) tracks setup, no-fee evidence, and the remaining real-wallet demo. Hosted database access timed out during this session; no browser reconnect, real passport mint, deployment or Milestone 1 closure is claimed. Milestone 2 source tooling has started alongside the outstanding live acceptance.
+As of November 6, implementation and project acceptance for Milestone 1 are complete. The project owner confirms the hosted GitHub-first onboarding flow, JoyID ownership verification, sponsored CoTA activation, manifest claim/update, passport minting, and public profile display. Same-wallet reconnect and unchanged sync incur no new transaction or fee; passport refresh/retry returns the same mint. Latest-manifest verification, current passport ownership, public/private profile checks, and consolidated delivery evidence were also confirmed.
 
-The dashboard connection UI, verified wallet linking, sponsored CoTA registration, standard metadata issuance, real JoyID claim, and identity/public-backup SMT update have passed on testnet for Amentor-coder. The [October 27 manifest update](https://pudge.explorer.nervos.org/transaction/0x2707eac62a37e6f7206bfdfbfa240facfbd59e1bd24f8d3eeefe9f7020f47411) is confirmed; independent public-RPC verification returns valid with one backup record and one verified backup anchor. Existing legacy backup metadata was recovered without a repeat backup. Browser reconnect/unchanged-sync acceptance, the other account's claim, Sovereign Passport minting/profile integration, and the full onboarding demonstrations remain pending. Milestone 1 stays open. See the [manifest runbook](./COTA_MANIFEST_RUNBOOK.md) and completion log below.
+The [latest confirmed manifest update](https://pudge.explorer.nervos.org/transaction/0xb7f6c86d899794fd9534338ae77a280946e1d0f8dffef0d53ba099d3b60d4feb) includes the completed public backup proof. The [confirmed passport mint](https://pudge.explorer.nervos.org/transaction/0x541a6e1ff749dd56cf38fa5d6c7fdd69686868110e5c9ab8120cd3d4ca7eb3dc) creates Spore `0x3354b38df9a9a245cc01aabf57be83529bc97d826844fb72f156ce02458d0aad`, with 759 test CKB capacity and a 0.00013595 test CKB fee. The [delivery report](./PROGRESS_UPDATE_2026-10-30.md) requests community/reviewer sign-off. Milestone 2 source tooling is in progress.
 
-October 24 contract checks reproduce error 16 for the legacy extension with a valid generated passkey signature. The signed-witness builder passes both deployed JoyID and CoTA scripts, rejects proof tampering, and preserves the cell's original data. The database migration stores proof attempts separately by protocol. October 25 verification found one preserved legacy attempt and one confirmed signed-witness attempt. The committed witness matches the prepared payload, its record commitment recomputes correctly, and its backup Merkle root matches the confirmed anchor output. Browser reconnect and unchanged-sync acceptance remain pending. The last implementation checks passed 73 tests, with two disposable-database integration tests skipped, plus TypeScript and an isolated production build; these checks were not rerun for this documentation update.
+This status update records the project owner's completed live checks; it does not claim that the documentation editor reran those checks. The [onboarding acceptance guide](./PASSPORT_AND_ONBOARDING_ACCEPTANCE.md) and [manifest runbook](./COTA_MANIFEST_RUNBOOK.md) retain reproduction procedures. Earlier dated completion-log entries below record the state during development and are superseded by the current acceptance entry.
 
 ## Milestone 2: CLI Restore Tooling and Hardening
 
@@ -142,6 +144,7 @@ The proposal reserves these items for separate Phase Two funding:
 
 | Date | Completed deliverable | Evidence |
 | --- | --- | --- |
+| November 6, 2026 | Milestone 1 implementation and hosted project acceptance complete; community review requested | Project owner confirmed the resolved hosted configuration, end-to-end wallet-free backup and JoyID onboarding, manifest sync, real-wallet passport mint, public display, same-wallet reconnect with unchanged sync and no added fee, same-mint refresh/retry, latest-manifest and ownership verification, privacy checks, and consolidated evidence. [Latest manifest](https://pudge.explorer.nervos.org/transaction/0xb7f6c86d899794fd9534338ae77a280946e1d0f8dffef0d53ba099d3b60d4feb), [passport mint](https://pudge.explorer.nervos.org/transaction/0x541a6e1ff749dd56cf38fa5d6c7fdd69686868110e5c9ab8120cd3d4ca7eb3dc), and [delivery report](./PROGRESS_UPDATE_2026-10-30.md). Acceptance source: project owner's confirmation in the November 6 conversation; no new automated test run is claimed by this documentation update. |
 | October 27, 2026 | Enabled the real passport runtime and funded Amentor-coder’s JoyID wallet | Applied the additive passport table to the actual database, enabled the feature and restarted the app. The working direct PostgreSQL/IPv4 adapter passes all 190 web checks and the production build; the actual public identity API returns a verified manifest. Owner-authorized [funding transaction](https://pudge.explorer.nervos.org/transaction/0x62a33ccb19c140b04910c232a42226749b1a60d029b1abaa454b88cd99424ca3) is confirmed for 830 test CKB, covering the calculated 759 CKB passport capacity plus wallet change/fees. The real latest-backup sync, passport mint and browser reconnect still require owner approval and verification; Milestone 1 remains open. |
 | October 27, 2026 | Local wallet-funded Spore passport, verified public identity and Milestone 2 CLI start | 190 web checks pass with none skipped, including deployed JoyID/Spore scripts with a generated passkey, concurrent PostgreSQL approvals, additive migration replay and profile/CLI privacy checks; two CLI tests verify encrypted bundle recovery after removing the original repository. TypeScript and production build pass. Unchanged API preparation returns before reserving a stream. [Acceptance/setup guide](./PASSPORT_AND_ONBOARDING_ACCEPTANCE.md) and [source CLI guide](../packages/cli/README.md). Hosted database connectivity timed out; no live passport mint, browser reconnect, deployment or Milestone 1 closure is claimed. |
 | October 27, 2026 | Confirmed JoyID-approved backup manifest update and independent verification | Amentor-coder's [update](https://pudge.explorer.nervos.org/transaction/0x2707eac62a37e6f7206bfdfbfa240facfbd59e1bd24f8d3eeefe9f7020f47411) is committed and saved as confirmed. Standalone public-RPC verification returns `valid: true`, with one backup proof and one verified anchor; it checks issuer issuance, JoyID claim, approved update lineage, reconstructed manifest root `0x5d06f7f3e77230002559e74b6373bfea9971ff8ec5aa818b83d554a8768bd17f`, and the backup anchor. Result: `/tmp/rivet-cota-manifest-update-verification-331813761.json`. A newer ordinary backup completed while this saved snapshot was being approved, so another sync may be offered for that newer version. Added bounded wallet/server waits, Stop waiting, and status refresh during pending requests; 78 manifest checks and production build pass. Other-account claim, browser unchanged-sync acceptance, and remaining Phase One requirements stay open. |

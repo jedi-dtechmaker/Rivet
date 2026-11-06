@@ -1,5 +1,5 @@
 {
-  "name": "@proof/web",
+  "name": "@rivet/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {

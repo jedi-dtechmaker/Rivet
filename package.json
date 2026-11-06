@@ -1,13 +1,13 @@
 {
-  "name": "proof",
+  "name": "rivet",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@12.4.2",
-  "description": "PROOF — Provable Repository of Open & Onchain Files",
+  "description": "Rivet — Decentralized GitHub backup, timestamping, and restore on CKB",
   "scripts": {
-    "dev": "pnpm --filter @proof/web dev",
+    "dev": "pnpm --filter @rivet/web dev",
     "rivet": "node packages/cli/src/cli.mjs",
-    "build": "pnpm --filter @proof/web build",
+    "build": "pnpm --filter @rivet/web build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "clean": "pnpm -r clean"

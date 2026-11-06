@@ -23,12 +23,12 @@ The production dependency audit reports no critical, high, or moderate advisorie
 
    ```sh
    pnpm install --frozen-lockfile
-   pnpm --filter @proof/web run release:setup
+   pnpm --filter @rivet/web run release:setup
    ```
 
    Setup adds missing wallet-verification, registration, proof, and worker-limit storage. It preserves users, backups, approved transactions, and identity ownership. Repeat runs are safe. It expects the existing base `User`/`Repository` schema; do not use `db push --accept-data-loss` on the deployed database. Schema setup was verified both on an existing schema and on a legacy schema with preserved backup evidence.
 
-2. Keep the existing hosting root at `apps/web` and use Node 24. Use `pnpm build` there, or `pnpm --filter @proof/web build` from the repository root. Remove any old hosting override that explicitly runs `prisma db push`. Keep the root workspace files and `patches/` available to installation.
+2. Keep the existing hosting root at `apps/web` and use Node 24. Use `pnpm build` there, or `pnpm --filter @rivet/web build` from the repository root. Remove any old hosting override that explicitly runs `prisma db push`. Keep the root workspace files and `patches/` available to installation.
 
 3. Keep the existing OAuth and worker secrets. Check only missing settings:
 

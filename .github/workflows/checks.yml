@@ -40,9 +40,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --prod --audit-level=moderate
       - name: Install disposable test schema
-        run: pnpm --filter @proof/web exec prisma db push --skip-generate
+        run: pnpm --filter @rivet/web exec prisma db push --skip-generate
       - name: Verify additive release setup
-        run: pnpm --filter @proof/web run release:setup
-      - run: pnpm --filter @proof/web test
-      - run: pnpm --filter @proof/web exec tsc --noEmit --incremental false
-      - run: pnpm --filter @proof/web build
+        run: pnpm --filter @rivet/web run release:setup
+      - run: pnpm --filter @rivet/web test
+      - run: pnpm --filter @rivet/web exec tsc --noEmit --incremental false
+      - run: pnpm --filter @rivet/web build

@@ -9,7 +9,7 @@ const command = process.argv[2];
 
 async function main() {
   if (!['create', 'address', 'balance'].includes(command)) {
-    console.log('Usage: pnpm --filter @proof/web run cota:sponsor create|address|balance');
+    console.log('Usage: pnpm --filter @rivet/web run cota:sponsor create|address|balance');
     return;
   }
 
