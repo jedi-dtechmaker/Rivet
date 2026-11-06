@@ -1,57 +1,21 @@
-import { Shield, Github, Globe, GitFork } from 'lucide-react';
-import styles from './page.module.css';
+import Link from 'next/link';
+import { Database, ShieldCheck, History, Fingerprint } from 'lucide-react';
+import { ContentPage } from '@/components/ContentPage';
+import styles from '@/components/ContentPage.module.css';
+
+export const metadata = { title: 'About Rivet' };
 
 export default function AboutPage() {
-  return (
-    <div className={styles.about_page}>
-      <div className={styles.hero}>
-        <div className={styles.hero_icon}>
-          <Shield size={48} />
-        </div>
-        <h1 className={styles.title}>The Rivet Manifesto</h1>
-        <p className={styles.subtitle}>
-          We believe developers should own their history, not rent it from centralized platforms.
-        </p>
-      </div>
-
-      <div className={styles.content}>
-        <div className={styles.section}>
-          <h2>The Problem</h2>
-          <p>
-            When a developer gets suspended or banned from a centralized platform like GitHub, they don't just lose their current code. They lose their entire professional history. Every commit, every timestamp, every contribution graph that proved their experience — wiped out in an instant. This is a single point of failure for open-source development.
-          </p>
-        </div>
-
-        <div className={styles.section}>
-          <h2>The Solution</h2>
-          <p>
-            Rivet is a decentralized bridge. We don't want to replace GitHub — we want to make it safe to use. By creating `git clone --mirror` backups and storing them on IPFS, your code is immortalized. By computing a Merkle tree of your commits and anchoring the root on the Nervos CKB blockchain, your history is provable on-chain.
-          </p>
-        </div>
-
-        <div className={styles.grid}>
-          <div className={styles.card}>
-            <Github size={24} className={styles.card_icon} />
-            <h3>Centralized Convenience</h3>
-            <p>Keep using the tools you love. When you link your GitHub, we handle the backups automatically.</p>
-          </div>
-          <div className={styles.card}>
-            <Globe size={24} className={styles.card_icon} />
-            <h3>Decentralized Security</h3>
-            <p>Your backups are stored on IPFS. Your proofs are anchored on CKB. No single entity can delete them.</p>
-          </div>
-          <div className={styles.card}>
-            <GitFork size={24} className={styles.card_icon} />
-            <h3>Seamless Restoration</h3>
-            <p>Create a new repository anywhere, and push your history back from the IPFS bundle.</p>
-          </div>
-        </div>
-
-        <div className={styles.footer_cta}>
-          <h2>Take control of your code.</h2>
-          <button className="btn btn--primary btn--lg" style={{ marginTop: 'var(--space-4)' }}>Connect Wallet</button>
-        </div>
-      </div>
+  return <ContentPage title="Your work deserves a backup plan." description="Rivet helps developers keep a recoverable copy of their Git history and a blockchain commitment to their work, while continuing to use GitHub." actions={<><Link href="/dashboard" className="btn btn--primary">Back up a repository</Link><Link href="/docs" className="btn btn--secondary">Read the guides</Link></>}>
+    <section className={styles.section}><h2>Why we’re building Rivet</h2><p>A deleted repository, a lost account, or a platform outage should not be the end of your code’s history. Rivet adds a backup and recovery layer alongside GitHub, so your development workflow can stay familiar.</p></section>
+    <div className={styles.grid}>
+      <article className={styles.card}><Database size={24} aria-hidden="true" /><h2>Save your Git history</h2><p>A worker mirrors your repository and creates a Git bundle stored through IPFS. Your commits, branches, and tags travel with the backup.</p></article>
+      <article className={styles.card}><ShieldCheck size={24} aria-hidden="true" /><h2>Keep proof of a snapshot</h2><p>A commitment to the backup’s commit set is recorded on CKB testnet. Rivet sponsors the backup anchor fee.</p></article>
+      <article className={styles.card}><Fingerprint size={24} aria-hidden="true" /><h2>Choose an identity you own</h2><p>Optionally connect JoyID, activate a sponsored CoTA identity, sync your backup proofs, and mint a wallet-owned developer passport.</p></article>
+      <article className={styles.card}><History size={24} aria-hidden="true" /><h2>Plan for recovery</h2><p>Use repository restore controls or the source CLI’s exact local restore. Export a recovery file while your account is accessible.</p></article>
     </div>
-  );
+    <section className={styles.section}><h2>Built for developers, open for review</h2><p>Rivet is open source and currently runs on CKB testnet. Public repository backups work without a wallet. Identity activation is sponsored; an optional passport mint uses your wallet’s test CKB.</p><div className={styles.actions}><a href="https://github.com/jedi-dtechmaker/Rivet" target="_blank" rel="noreferrer" className="btn btn--secondary">Explore the source ↗</a><a href="https://talk.nervos.org/t/dis-rivet-decentralized-github-backup-timestamping-and-restore-on-ckb/10739" target="_blank" rel="noreferrer" className="btn btn--secondary">Join the project discussion ↗</a></div></section>
+    <section className={styles.section}><h2>Where the project stands</h2><div className={styles.grid}><article className={styles.card}><span className={styles.status}><ShieldCheck size={16} aria-hidden="true" /> Milestone 1 delivered for review</span><h3>Developer identity and passport</h3><p>GitHub-first onboarding, JoyID ownership checks, sponsored identity activation, user-owned proof records, and Spore passport minting.</p><a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/docs/PROGRESS_UPDATE_2026-10-30.md" target="_blank" rel="noreferrer">Read the delivery report ↗</a></article><article className={styles.card}><h3>Next: recovery tooling and hardening</h3><p>CLI release packaging, stronger backup commitments, attribution restore, and broader recovery acceptance remain in development.</p><a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/docs/PHASE_ONE_MILESTONES.md" target="_blank" rel="noreferrer">Follow the milestone checklist ↗</a></article></div></section>
+    <details className={styles.details}><summary>What a backup proof does—and what it covers</summary><div><p>A CKB anchor establishes that a commitment existed at a blockchain checkpoint. Commit dates remain developer-supplied, and backup file availability depends on continued storage and retrieval.</p><p>Private backups, package-registry mirroring, and Bitcoin RGB++ bindings are not part of the current hosted flow. See the guides for the features available today.</p></div></details>
+  </ContentPage>;
 }

@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { RefreshCw, ShieldCheck, X, AlertTriangle, ExternalLink } from 'lucide-react';
+import { LoaderCircle, ShieldCheck, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ActionDialog } from './ActionDialog';
+import styles from './BackupButton.module.css';
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_WAIT_MS = 15 * 60 * 1000;
 
 export function BackupButton({ repoFullName, isPrivate = false, refresh = false }: { repoFullName: string, isPrivate?: boolean, refresh?: boolean }) {
   const [status, setStatus] = useState<'idle' | 'backing_up' | 'backed_up'>('idle');
-  const [progress, setProgress] = useState(0);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -40,8 +42,7 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
 
     try {
       setStatus('backing_up');
-      setProgress(5);
-      setStatusText('Queueing backup worker...');
+      setStatusText('Starting your backup…');
       setErrorMsg(null);
 
       // 1. Dispatch the GitHub Actions worker. Returns immediately (202).
@@ -59,8 +60,7 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
       const since = data.startedAt || new Date().toISOString();
       if (data.runUrl) setRunUrl(data.runUrl);
 
-      setStatusText('Running on GitHub Actions...');
-      setProgress(15);
+      setStatusText('Saving your repository…');
 
       // 2. Poll until the worker reports back through /api/backup/callback.
       const startedAt = Date.now();
@@ -77,8 +77,7 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
 
           if (sd.status === 'done') {
             stopPolling();
-            setProgress(100);
-            setStatusText('Anchored');
+            setStatusText('Backup complete');
             setTxHash(sd.ckbTxHash ?? null);
             setStatus('backed_up');
             router.refresh();
@@ -94,9 +93,7 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
             return;
           }
 
-          // The job is remote, so progress is indicative rather than exact.
-          setProgress((p) => (p < 85 ? p + 5 : 85));
-          setStatusText('Backing up on GitHub Actions...');
+          setStatusText('Saving your repository…');
         } catch {
           // Transient network error: keep polling.
         }
@@ -110,23 +107,22 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
   };
 
   if (isPrivate) {
-    return <p role="note">Private backups are disabled on testnet. Choose a public repository; encrypted private backups are planned for a later release.</p>;
+    return <span className={styles.note} role="note">Public repositories only on testnet.</span>;
   }
 
   if (status === 'backed_up') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div className={styles.result}>
         <span className="badge badge--success" style={{ padding: '4px 8px' }}>
-          <ShieldCheck size={12} /> Anchored
+          <ShieldCheck size={12} /> Backed up
         </span>
         {txHash && (
           <a
             href={`https://pudge.explorer.nervos.org/transaction/${txHash}`}
             target="_blank"
             rel="noreferrer"
-            style={{ fontSize: '10px', color: 'var(--color-primary)' }}
           >
-            View TX
+            View transaction
           </a>
         )}
       </div>
@@ -135,23 +131,9 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
 
   if (status === 'backing_up') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '150px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--color-text-dim)' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
-            <RefreshCw size={10} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-            {statusText || 'Initializing...'}
-          </span>
-          <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{progress}%</span>
-        </div>
-        <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--color-border)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{
-            height: '100%',
-            width: `${progress}%`,
-            backgroundColor: 'var(--color-primary)',
-            transition: 'width 0.3s ease',
-            boxShadow: '0 0 8px var(--color-primary)'
-          }} />
-        </div>
+      <div className={styles.result} aria-busy="true">
+        <span className={styles.progress} role="status"><LoaderCircle size={16} className="spin" aria-hidden="true" />{statusText || 'Starting your backup…'}</span>
+        {runUrl && <a href={runUrl} target="_blank" rel="noreferrer">View progress ↗</a>}
       </div>
     );
   }
@@ -159,57 +141,24 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
   return (
     <>
       <button
-        onClick={handleBackup}
+        type="button"
+        onClick={() => setReviewOpen(true)}
         className="btn btn--secondary"
-        style={{ padding: '4px 12px', fontSize: '12px' }}
       >
-        {refresh ? 'Refresh backup' : 'Backup Now'}
+        {refresh ? 'Update backup' : 'Back up now'}
       </button>
-
-      {/* Premium Error Modal Overlay */}
-      {errorMsg && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
-        }}>
-          <div style={{
-            backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)',
-            borderRadius: '16px', padding: '24px', width: '90%', maxWidth: '400px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative'
-          }}>
-            <button
-              onClick={() => setErrorMsg(null)}
-              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--color-text-dim)', cursor: 'pointer' }}
-            >
-              <X size={20} />
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: '#ff4d4f' }}>
-              <AlertTriangle size={24} />
-              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--color-text)' }}>Action Required</h3>
-            </div>
-            <p style={{ color: 'var(--color-text-dim)', lineHeight: 1.5, margin: 0, marginBottom: '24px' }}>
-              {errorMsg}
-            </p>
-            {runUrl && (
-              <a
-                href={runUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-primary)', marginBottom: '16px' }}
-              >
-                <ExternalLink size={12} /> View workflow run
-              </a>
-            )}
-            <button
-              onClick={() => setErrorMsg(null)}
-              className="btn btn--primary" style={{ width: '100%', justifyContent: 'center' }}
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
+      <ActionDialog open={reviewOpen} onClose={() => setReviewOpen(false)} title={refresh ? 'Update your backup' : 'Back up your repository'} actions={<>
+        <button type="button" className="btn btn--secondary" onClick={() => setReviewOpen(false)}>Not now</button>
+        <button type="button" className="btn btn--primary" onClick={() => { setReviewOpen(false); handleBackup(); }}>{refresh ? 'Update backup' : 'Start backup'}</button>
+      </>}>
+        <p><strong>{repoFullName}</strong></p>
+        <p>{refresh ? 'Save the latest Git history of this repository as a new backup.' : 'Save your repository’s Git history so you can recover it later.'}</p>
+        <p>The backup is stored on IPFS, and a proof is recorded on CKB testnet. Rivet covers the backup fee. No wallet is needed.</p>
+      </ActionDialog>
+      <ActionDialog open={!!errorMsg} onClose={() => setErrorMsg(null)} title="Your backup needs attention">
+        <p role="alert">{errorMsg}</p>
+        {runUrl && <a href={runUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} aria-hidden="true" /> View backup progress</a>}
+      </ActionDialog>
     </>
   );
 }

@@ -13,11 +13,12 @@ const SidebarContext = createContext<SidebarContextProps | undefined>(undefined)
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  // Set the default state based on screen size on the client
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth > 768) {
-      setSidebarOpen(true);
-    }
+    const desktop = window.matchMedia('(min-width: 1101px)');
+    setSidebarOpen(desktop.matches);
+    const handleChange = (event: MediaQueryListEvent) => setSidebarOpen(event.matches);
+    desktop.addEventListener('change', handleChange);
+    return () => desktop.removeEventListener('change', handleChange);
   }, []);
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);

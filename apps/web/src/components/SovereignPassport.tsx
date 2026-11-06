@@ -4,6 +4,8 @@ import { ccc } from '@ckb-ccc/connector-react';
 import { useSession } from 'next-auth/react';
 import { PassportCard } from './PassportCard';
 import { RefreshButton } from './RefreshButton';
+import { ActionDialog, HelpButton } from './ActionDialog';
+import { CheckCircle2, Fingerprint, LoaderCircle } from 'lucide-react';
 import { waitForManifestStep } from '@/lib/cota-manifest-wait';
 import styles from './CotaManifest.module.css';
 type State = { enabled: boolean; passport: null | { status: string; sporeId: string; transaction: ccc.TransactionLike | null;
@@ -18,6 +20,8 @@ export function SovereignPassport({ signer, verified, disabled, onBusyChange }: 
 }) {
   const [state, setState] = useState<State | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [phase, setPhase] = useState<'wallet' | 'server' | null>(null);
   const { data: session } = useSession();
   const version = useRef(0);
   const active = useRef(false), abort = useRef<AbortController | null>(null);
@@ -45,48 +49,67 @@ export function SovereignPassport({ signer, verified, disabled, onBusyChange }: 
       let signedTransaction;
       if (passport?.transaction) {
         if (approved.current?.sporeId !== passport.sporeId) {
+          setPhase('wallet');
           const signed = await waitForManifestStep(signer.signTransaction(passport.transaction), 'wallet', 90000, controller.signal);
           approved.current = { sporeId: passport.sporeId, transaction: JSON.parse(signed.stringify()) };
         }
         signedTransaction = approved.current.transaction;
       }
       if (wallet.current !== signer) throw new Error('Reconnect the same verified JoyID wallet before continuing.');
+      setPhase('server');
       setState(await waitForManifestStep(fetch('/api/user/passport', { method: 'POST', signal: controller.signal,
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: passport && passport.status !== 'building' ? 'submit' : 'prepare', signedTransaction }),
       }).then(read), 'server', 60000, controller.signal));
     } catch (failure) {
       controller.abort();
       setError(failure instanceof Error ? failure.message : 'Could not continue passport minting.');
-    } finally { active.current = false; abort.current = null; setBusy(false); onBusyChange(false); }
+    } finally { active.current = false; abort.current = null; setPhase(null); setBusy(false); onBusyChange(false); }
   }
   if (!state?.enabled && !state?.passport && !error) return null;
   const passport = state?.passport;
+  const confirmed = passport?.status === 'confirmed';
+  const status = confirmed ? 'Passport minted' : passport?.status === 'submitted' ? 'Confirming on testnet' : passport?.status === 'accepted' ? 'Saved for submission' : passport ? 'Ready to continue' : 'Not minted yet';
   return <section className={styles.manifest} aria-labelledby="passport-title">
-    <h3 id="passport-title">Sovereign Passport</h3>
+    <div className={styles.heading}><span className={styles.sectionIcon}><Fingerprint size={20} aria-hidden="true" /></span><h3 id="passport-title">Developer passport</h3></div>
     <div className={styles.passportLayout}>
-    <PassportCard username={session?.user?.name || undefined} sporeId={passport?.sporeId} status={passport?.status === 'confirmed' ? 'Mint confirmed on CKB' : passport ? `Mint ${passport.status}` : 'Ready to make yours'} explorerUrl={passport?.explorerUrl} />
+    <PassportCard compact verified={confirmed} username={session?.user?.name || undefined} sporeId={passport?.sporeId} status={status} explorerUrl={passport?.explorerUrl} />
     <div className={styles.passportInfo}>
-    {passport?.status !== 'confirmed' && <p className={styles.description}>Mint your developer passport to JoyID.</p>}
-    {passport && <details className={styles.details}><summary>Passport details & transaction</summary><div className={styles.review}>
-      <p role="status">Passport: {passport.status}.</p>
-      <p className={styles.commitment}>Spore ID: {passport.sporeId}</p>
-      <p>Locked capacity: {passport.capacityCKB} test CKB. Network fee: {passport.feeCKB} test CKB.</p>
-      <p className={styles.commitment}>Manifest at mint: {passport.manifestRoot}</p>
-      {passport.explorerUrl && <a href={passport.explorerUrl} target="_blank" rel="noreferrer">View passport transaction</a>}
-      {passport.status === 'confirmed' && <RefreshButton label="Refresh status" disabled={busy || disabled} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />}
-    </div></details>}
+    {!confirmed && <p className={styles.description}>Your developer identity, in a collectible you own.</p>}
+    {confirmed && <span className={styles.success} role="status"><CheckCircle2 size={16} aria-hidden="true" /> Mint confirmed</span>}
     </div></div>
-    {(!passport || passport.status === 'prepared') && <label className={styles.consent}>
-      <input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={busy} />
-      <span>Use my JoyID wallet’s test CKB to mint my public passport. I will review the capacity and fee before approving.</span>
-    </label>}
-    {error && <p role="alert" className={styles.error}>{error}</p>}
+    {!verified && !confirmed && <p className={styles.description}>Connect your identity wallet to mint.</p>}
+    {busy && !reviewOpen && <p role="status" className={styles.pending}><LoaderCircle size={16} className={styles.spinner} aria-hidden="true" />{phase === 'wallet' ? 'Approve in the JoyID window…' : 'Preparing your passport…'}</p>}
+    {error && !reviewOpen && <p role="alert" className={styles.error}>{error}</p>}
     <div className={styles.actions}>
-      {state?.enabled && passport?.status !== 'confirmed' && <button className="btn btn--primary" disabled={busy || disabled || !verified || (!consent && (!passport || passport.status === 'prepared'))} onClick={act}>
-        {busy ? 'Waiting for passport…' : !passport ? 'Prepare passport mint' : passport.status === 'building' ? 'Continue preparation' : passport.transaction ? 'Review and mint in JoyID' : 'Retry saved mint'}
+      {busy && !reviewOpen && <button type="button" className="btn btn--secondary" onClick={() => setReviewOpen(true)}>View progress</button>}
+      {(state?.enabled || confirmed) && <button type="button" className={confirmed ? 'btn btn--secondary' : 'btn btn--primary'} disabled={busy || disabled || (!confirmed && !verified)} onClick={() => setReviewOpen(true)}>
+        {confirmed ? 'View passport' : !passport ? 'Create passport' : 'Continue minting'}
       </button>}
-      {busy && <button className="btn btn--secondary" onClick={() => abort.current?.abort()}>Stop waiting</button>}
-      {passport?.status !== 'confirmed' && <RefreshButton label="Refresh passport status" disabled={busy || disabled} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />}
+      <RefreshButton label="Check status" disabled={busy || disabled} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />
     </div>
+    <HelpButton title="What is a developer passport?">
+      <p>Your Sovereign Passport is a Spore collectible on CKB, owned by your JoyID wallet. It records your verified identity and backup proofs at the time you mint it.</p>
+      <p>Minting is optional. Your wallet supplies the CKB locked in the passport and pays the network fee. The review screen shows both amounts before you approve.</p>
+      <p>The card is Rivet’s visual presentation. The on-chain passport stores identity data; its artwork is displayed by the app.</p>
+    </HelpButton>
+    <ActionDialog open={reviewOpen} onClose={() => setReviewOpen(false)} title={confirmed ? 'Your developer passport' : 'Create your developer passport'} actions={<>
+      <button type="button" className="btn btn--secondary" onClick={() => setReviewOpen(false)}>{busy ? 'Hide progress' : confirmed ? 'Done' : 'Not now'}</button>
+      {!confirmed && state?.enabled && <button type="button" className="btn btn--primary" disabled={busy || disabled || !verified || (!consent && (!passport || passport.status === 'prepared'))} onClick={act}>
+        {busy ? phase === 'wallet' ? 'Waiting for JoyID…' : 'Preparing passport…' : !passport ? 'Prepare passport' : passport.status === 'building' ? 'Continue preparation' : passport.transaction ? 'Approve mint in JoyID' : 'Retry saved mint'}
+      </button>}
+    </>}>
+      <p>{confirmed ? 'Your passport is confirmed on CKB testnet.' : 'Mint a public collectible for your verified developer identity. You own it through your JoyID wallet.'}</p>
+      {passport ? <>
+        <div className={styles.review}><strong>Locked capacity: {passport.capacityCKB} test CKB</strong><strong>Network fee: {passport.feeCKB} test CKB</strong><p>Paid by your JoyID wallet. Locked capacity is stored in the passport and is separate from the fee.</p></div>
+        <p role="status">{status}</p>
+        <details className={styles.details}><summary>Technical details</summary><p className={styles.commitment}>Spore ID: {passport.sporeId}</p><p className={styles.commitment}>Manifest at mint: {passport.manifestRoot}</p></details>
+        {passport.explorerUrl && <a href={passport.explorerUrl} target="_blank" rel="noreferrer">View passport transaction ↗</a>}
+      </> : <p>Your wallet funds the passport’s locked capacity and network fee. Prepare the mint to see the exact amounts before approving.</p>}
+      {(!passport || passport.status === 'prepared') && <label className={styles.consent}><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={busy} /><span>Use my JoyID wallet’s test CKB to mint my public passport.</span></label>}
+      {phase === 'wallet' && <p role="status">Open the JoyID window and approve with your passkey.</p>}
+      {phase === 'server' && <p role="status">Checking and saving your passport transaction…</p>}
+      {busy && <button type="button" className="btn btn--secondary" onClick={() => abort.current?.abort()}>Stop waiting</button>}
+      {error && <p role="alert" className={styles.error}>{error}</p>}
+    </ActionDialog>
   </section>;
 }

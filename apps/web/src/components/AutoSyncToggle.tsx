@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { HelpButton } from './ActionDialog';
+import styles from './AutoSyncToggle.module.css';
 
 export function AutoSyncToggle({ initialAutoSync }: { initialAutoSync: boolean }) {
   const [isAutoSync, setIsAutoSync] = useState(initialAutoSync);
@@ -39,38 +41,17 @@ export function AutoSyncToggle({ initialAutoSync }: { initialAutoSync: boolean }
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <label 
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px', 
-          cursor: isPending ? 'not-allowed' : 'pointer',
-          opacity: isPending ? 0.7 : 1,
-          color: isAutoSync ? 'var(--color-primary)' : 'var(--color-text-dim)',
-          fontSize: '14px',
-          fontWeight: 500,
-          background: isAutoSync ? 'rgba(255, 107, 0, 0.1)' : 'transparent',
-          padding: '6px 12px',
-          borderRadius: '8px',
-          border: `1px solid ${isAutoSync ? 'var(--color-primary)' : 'var(--color-border)'}`,
-          transition: 'all 0.2s ease'
-        }}
-      >
-        <div style={{ position: 'relative', width: '32px', height: '18px', background: isAutoSync ? 'var(--color-primary)' : 'var(--color-border)', borderRadius: '18px', transition: 'background 0.2s ease' }}>
-          <div style={{ position: 'absolute', top: '2px', left: isAutoSync ? '16px' : '2px', width: '14px', height: '14px', background: 'var(--color-surface)', borderRadius: '50%', transition: 'left 0.2s ease' }} />
-        </div>
-        <input 
-          type="checkbox" 
-          checked={isAutoSync} 
-          onChange={handleToggle} 
-          disabled={isPending}
-          style={{ display: 'none' }}
-        />
-        {isAutoSync ? 'Auto-Sync Active' : 'Auto-Sync Off'}
-        {isPending && <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />}
-      </label>
-      {error && <span role="alert">{error}</span>}
+    <div className={styles.container}>
+      <button type="button" role="switch" aria-checked={isAutoSync} aria-label="Auto-backup" aria-busy={isPending} disabled={isPending} onClick={handleToggle} className={`${styles.toggle} ${isAutoSync ? styles.active : ''}`}>
+        <span className={styles.track} aria-hidden="true"><span /></span>
+        Auto-backup <span className={styles.state}>{isAutoSync ? 'On' : 'Off'}</span>
+        {isPending && <LoaderCircle size={14} className="spin" aria-hidden="true" />}
+      </button>
+      <HelpButton title="Automatic backups" label="About auto-backup">
+        <p>When enabled, Rivet starts a backup when it receives a GitHub push event for one of your repositories.</p>
+        <p>You can still select <strong>Back up now</strong> or <strong>Update backup</strong> on an individual repository. Private repository backups are unavailable on testnet.</p>
+      </HelpButton>
+      {error && <span className={styles.error} role="alert">{error}</span>}
     </div>
   );
 }

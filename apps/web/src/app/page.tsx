@@ -31,12 +31,12 @@ export default function Home() {
         </div>
 
         <h1 className={styles.hero__title}>
-          Your Code. Your Keys. <br />
-          <span className={styles['hero__title-highlight']}>Your Proof. Forever.</span>
+          Your Code. Your History. <br />
+          <span className={styles['hero__title-highlight']}>Your Backup Plan.</span>
         </h1>
 
         <p className={styles.hero__subtitle}>
-          A decentralized platform that backs up, timestamps, and restores your GitHub history using blockchain technology. Never lose your code or reputation again.
+          Back up your public GitHub repositories, keep proof of their history on CKB testnet, and prepare for recovery. Get started without a wallet.
         </p>
 
         <div className={styles.hero__cta}>
@@ -53,20 +53,20 @@ export default function Home() {
             <div className={`${styles['hero__terminal-dot']} ${styles['hero__terminal-dot--red']}`}></div>
             <div className={`${styles['hero__terminal-dot']} ${styles['hero__terminal-dot--yellow']}`}></div>
             <div className={`${styles['hero__terminal-dot']} ${styles['hero__terminal-dot--green']}`}></div>
-            <div className={styles['hero__terminal-title']}>rivet-cli</div>
+            <div className={styles['hero__terminal-title']}>Your backup, step by step</div>
           </div>
           <div className={styles['hero__terminal-body']}>
             <div className={styles['hero__terminal-line']}>
               <span className={styles['hero__terminal-prompt']}>~ ❯</span>
-              <span className={styles['hero__terminal-cmd']}>rivet backup --github jedi</span>
+              <span className={styles['hero__terminal-cmd']}>Choose a public repository → Back up now</span>
             </div>
             <div className={styles['hero__terminal-output']}>
-              <div className={styles['hero__terminal-success']}>✓ Cloned 47 repositories (mirror mode)</div>
-              <div className={styles['hero__terminal-success']}>✓ Computed Merkle root: 0x7a8b3c...</div>
-              <div className={styles['hero__terminal-success']}>✓ Uploaded to IPFS: bafybei...</div>
-              <div className={styles['hero__terminal-success']}>✓ Anchored on CKB: tx 0xdef456...</div>
+              <div>1. Mirror the repository’s Git history</div>
+              <div>2. Save a backup bundle through IPFS</div>
+              <div>3. Record its commit-set proof on CKB testnet</div>
+              <div>4. Keep the backup references for recovery</div>
               <br />
-              <div>Your code is now permanently backed up and provable.</div>
+              <div>No wallet needed. Rivet covers the backup anchor fee.</div>
             </div>
             <div className={styles['hero__terminal-line']}>
               <span className={styles['hero__terminal-prompt']}>~ ❯</span>
@@ -92,7 +92,7 @@ export default function Home() {
             </div>
             <h3 className={styles['feature-card__title']}>IPFS Mirrors</h3>
             <p className={styles['feature-card__description']}>
-              We run a full `git clone --mirror` on your repos and store them on IPFS and Arweave. Every branch, tag, and commit is preserved.
+              Rivet mirrors your repository and stores a Git bundle through IPFS, including its commits, branches, and tags.
             </p>
           </div>
 
@@ -102,7 +102,7 @@ export default function Home() {
             </div>
             <h3 className={styles['feature-card__title']}>CKB Anchors</h3>
             <p className={styles['feature-card__description']}>
-              We compute a Merkle root of your entire history and anchor it on the Nervos CKB blockchain. Immutable and permanent proof.
+              A commitment to your backup’s commit set is recorded on CKB testnet, giving you a blockchain checkpoint for that snapshot.
             </p>
           </div>
 
@@ -110,9 +110,9 @@ export default function Home() {
             <div className={`${styles['feature-card__icon']} ${styles['feature-card__icon--restore']}`}>
               <History size={24} />
             </div>
-            <h3 className={styles['feature-card__title']}>Perfect Restore</h3>
+            <h3 className={styles['feature-card__title']}>Recovery Tools</h3>
             <p className={styles['feature-card__description']}>
-              Restore to a new GitHub account anytime. We remap your emails so your contribution graph lights up with the original historical dates.
+              Recover saved Git history through repository restore controls or the source CLI. Exact local restore is available; attribution remapping is in development.
             </p>
           </div>
 
@@ -122,7 +122,7 @@ export default function Home() {
             </div>
             <h3 className={styles['feature-card__title']}>Sovereign Passport</h3>
             <p className={styles['feature-card__description']}>
-              Mint your developer identity as an RGB++ Spore DOB. Your reputation belongs to you, not the platform.
+              Optionally mint a Spore developer passport owned by your JoyID wallet. It records your verified identity snapshot on CKB testnet.
             </p>
           </div>
 
@@ -142,7 +142,7 @@ export default function Home() {
             </div>
             <h3 className={styles['feature-card__title']}>Public Verification</h3>
             <p className={styles['feature-card__description']}>
-              Anyone can verify your authorship by checking your on-chain CKB proof. Cryptographically provable history.
+              Look up public backup anchors and inspect developer identity proofs. Check what a proof establishes before relying on it.
             </p>
           </div>
         </div>
@@ -152,7 +152,7 @@ export default function Home() {
         <div className={styles['how-it-works__header']}>
           <h2 className={styles['how-it-works__title']}>How it works</h2>
           <p className={styles['how-it-works__subtitle']}>
-            Four steps to permanent code ownership.
+            A backup workflow you can understand.
           </p>
         </div>
 
@@ -172,9 +172,9 @@ export default function Home() {
             <div className={styles.step__content}>
               <h3 className={styles.step__title}>Backup to Decentralized Storage</h3>
               <p className={styles.step__description}>
-                With one click, we create full Git mirrors of your selected repos and upload them to IPFS, ensuring the data is always available.
+                Start a backup of a public repository. Rivet mirrors its Git history and saves a bundle through IPFS.
               </p>
-              <div className={`${styles.step__tag} ${styles['step__tag--ipfs']}`}>IPFS / Arweave</div>
+              <div className={`${styles.step__tag} ${styles['step__tag--ipfs']}`}>Git bundle / IPFS</div>
             </div>
           </div>
 
@@ -183,7 +183,7 @@ export default function Home() {
             <div className={styles.step__content}>
               <h3 className={styles.step__title}>Anchor Proof on Blockchain</h3>
               <p className={styles.step__description}>
-                We silently generate a CoTA cell and anchor the Merkle root of your commit history to the CKB blockchain, creating an unforgeable timeline of your work.
+                Rivet records a commitment to the backup’s commit set on CKB testnet. A separate wallet-owned CoTA identity is optional.
               </p>
               <div className={`${styles.step__tag} ${styles['step__tag--ckb']}`}>Nervos CKB</div>
             </div>
@@ -192,11 +192,11 @@ export default function Home() {
           <div className={styles.step}>
             <div className={`${styles.step__number} ${styles['step__number--4']}`}>4</div>
             <div className={styles.step__content}>
-              <h3 className={styles.step__title}>Restore Anytime</h3>
+              <h3 className={styles.step__title}>Prepare for Recovery</h3>
               <p className={styles.step__description}>
-                If you ever lose your GitHub account, use Rivet to push your history to a new account. We map your emails so all original timestamps are preserved.
+                Inspect your saved backup and export a private recovery file with the source CLI. Test a restore before you need it.
               </p>
-              <div className={`${styles.step__tag} ${styles['step__tag--github']}`}>GitHub API</div>
+              <div className={`${styles.step__tag} ${styles['step__tag--github']}`}>Restore / recovery guide</div>
             </div>
           </div>
         </div>
@@ -224,9 +224,9 @@ export default function Home() {
           </div>
           <div className={styles.footer__links}>
             <Link href="/docs" className={styles.footer__link}>Documentation</Link>
-            <Link href="/github" className={styles.footer__link}>GitHub</Link>
-            <Link href="/twitter" className={styles.footer__link}>Twitter</Link>
-            <Link href="/discord" className={styles.footer__link}>Discord</Link>
+            <a href="https://github.com/jedi-dtechmaker/Rivet" target="_blank" rel="noreferrer" className={styles.footer__link}>GitHub</a>
+            <a href="https://talk.nervos.org/t/dis-rivet-decentralized-github-backup-timestamping-and-restore-on-ckb/10739" target="_blank" rel="noreferrer" className={styles.footer__link}>Community</a>
+            <Link href="/about" className={styles.footer__link}>About Rivet</Link>
           </div>
           <div className={styles.footer__tech}>
             Powered by <img src="https://cryptologos.cc/logos/nervos-network-ckb-logo.svg?v=032" alt="CKB" width="16" height="16" /> Nervos CKB

@@ -12,7 +12,7 @@ import styles from './Header.module.css';
 export function Header() {
   const { wallet, open, disconnect } = ccc.useCcc();
   const { data: session, status } = useSession();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isSidebarOpen } = useSidebar();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -73,7 +73,7 @@ export function Header() {
   const showSidebarHamburger =
     (isWalletConnected || isGithubLinked) && !isPublicRoute;
     
-  const showPublicHamburger = isPublicRoute;
+  const showPublicHamburger = !showSidebarHamburger;
   
   const closeMobileNav = () => setIsMobileNavOpen(false);
 
@@ -82,12 +82,12 @@ export function Header() {
       <div className={styles.header__inner}>
         <div className={styles.header__left}>
           {showSidebarHamburger && (
-            <button className={styles.hamburger} onClick={toggleSidebar} aria-label="Toggle Menu">
-              <Menu size={24} />
+            <button className={styles.hamburger} onClick={toggleSidebar} aria-label={isSidebarOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={isSidebarOpen} aria-controls="app-sidebar">
+              {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           )}
           {showPublicHamburger && (
-            <button className={`${styles.hamburger} ${styles['hamburger--mobile-only']}`} onClick={() => setIsMobileNavOpen(!isMobileNavOpen)} aria-label="Toggle Mobile Navigation">
+            <button className={`${styles.hamburger} ${styles['hamburger--mobile-only']}`} onClick={() => setIsMobileNavOpen(!isMobileNavOpen)} aria-label="Toggle Mobile Navigation" aria-expanded={isMobileNavOpen} aria-controls="public-mobile-navigation">
               {isMobileNavOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           )}
@@ -115,7 +115,7 @@ export function Header() {
           
           {/* Mobile Navigation Dropdown for Public Routes */}
           {showPublicHamburger && isMobileNavOpen && (
-            <nav className={styles.mobile_nav} aria-label="Mobile navigation">
+            <nav id="public-mobile-navigation" className={styles.mobile_nav} aria-label="Mobile navigation">
               <Link href="/explore" className={styles['mobile_nav-link']} onClick={closeMobileNav}>
                 Explore
               </Link>
@@ -137,6 +137,7 @@ export function Header() {
             <button
               className={styles['header__connect-btn']}
               onClick={() => signIn('github')}
+              aria-label="Sign in with GitHub"
             >
               <LogIn size={16} />
               <span className={styles['header__connect-btn-text']}>Sign In</span>
@@ -148,6 +149,8 @@ export function Header() {
                 id="user-menu-btn"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 title="Account Menu"
+                aria-label="Open account menu"
+                aria-expanded={isDropdownOpen}
               >
                 <div className={styles.header__avatar}>
                   {session?.user?.image ? (

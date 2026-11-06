@@ -2,42 +2,23 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db, prisma } from '@/lib/db';
+import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
-export async function saveSettings(formData: FormData) {
+export type SettingsResult = { error: string; saved: boolean };
+
+export async function saveSettings(previousState: SettingsResult, formData: FormData): Promise<SettingsResult> {
   const session = await getServerSession(authOptions);
-  
-  if (!session || !session.user?.email) {
-    throw new Error('Unauthorized');
-  }
-
-  const isProfilePublic = formData.get('isProfilePublic') === 'on';
-  const autoSync = formData.get('autoSync') === 'on';
-  const bio = formData.get('bio') as string | null;
-  const ckbAddress = formData.get('ckbAddress') as string;
-
-  if (!ckbAddress) {
-    throw new Error('CKB Address is required to update settings');
-  }
-
-  // Find user to verify ownership
-  const user = await prisma.user.findUnique({
-    where: { ckbAddress }
-  });
-
-  if (!user || user.githubId !== session.user.email) {
-    throw new Error('Unauthorized or User not found');
-  }
-
-  await db.updateUserSettings(ckbAddress, {
-    isProfilePublic,
-    autoSync,
-    bio: bio || undefined,
-  });
-
-  if (user.githubUsername) {
-    revalidatePath(`/${user.githubUsername}`);
-  }
-  revalidatePath('/settings');
+  if (!session?.user?.id) return { error: 'Sign in with GitHub before saving your settings.', saved: false };
+  const bio = formData.get('bio');
+  if (typeof bio !== 'string' || bio.trim().length > 160) return { error: 'Your bio must be 160 characters or fewer.', saved: false };
+  try {
+    const user = await db.findUserByGithubId(session.user.id);
+    if (!user) return { error: 'Your Rivet account could not be found. Please sign in again.', saved: false };
+    await db.updateUserSettings(session.user.id, { bio: bio.trim(), isProfilePublic: formData.get('isProfilePublic') === 'on' });
+    if (user.githubUsername) revalidatePath(`/${user.githubUsername}`);
+    revalidatePath('/settings');
+    revalidatePath('/explore');
+    return { error: '', saved: true };
+  } catch { return { error: 'Your settings could not be saved. Please retry.', saved: false }; }
 }

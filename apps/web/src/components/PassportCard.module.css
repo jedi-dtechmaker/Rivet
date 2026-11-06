@@ -21,6 +21,18 @@
 .identity { padding: 24px 24px 20px; display: grid; gap: 10px; }
 .eyebrow { font-size: 9px; letter-spacing: .2em; color: #b4a58f; }
 .identity strong { font-size: clamp(18px, 3vw, 25px); letter-spacing: -.04em; overflow-wrap: anywhere; }
-.status { display: flex; align-items: center; gap: 7px; color: #c4ddba; font-size: 11px; }
+.status { display: flex; align-items: center; gap: 7px; color: #b4a58f; font-size: 11px; }
+.verified { color: #c4ddba; }
 .bottom { border-top: 1px solid #ffffff15; color: #b4a58f; padding-top: 14px; padding-bottom: 14px; font-size: 9px; }
 .bottom a { display: inline-flex; color: #ffc98f; }
+.compact { max-width: 320px; }
+.compact .top { padding: 14px 18px; }
+.compact .art { height: 100px; }
+.compact .emblem { width: 76px; height: 76px; border-radius: 20px; }
+.compact .emblem svg { width: 60px; height: 60px; }
+.compact .orbit { width: 180px; height: 90px; }
+.compact .orbitInner { width: 125px; height: 105px; }
+.compact .artLabel { display: none; }
+.compact .identity { padding: 14px 18px; gap: 6px; }
+.compact .identity strong { font-size: 20px; }
+.compact .bottom { padding: 10px 18px; }

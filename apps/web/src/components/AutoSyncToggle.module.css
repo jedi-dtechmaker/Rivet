@@ -1,0 +1,10 @@
+.container { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--color-border-hover); color: var(--color-text-secondary); font-size: var(--text-sm); white-space: nowrap; }
+.toggle.active { color: #80dfa3; background: var(--color-success-bg); border-color: #397a5055; }
+.toggle:disabled { opacity: .6; cursor: wait; }
+.track { display: inline-flex; align-items: center; width: 30px; height: 18px; padding: 3px; border-radius: 99px; background: var(--color-bg-hover); }
+.track span { width: 12px; height: 12px; background: var(--color-text-secondary); border-radius: 50%; transition: transform .15s ease; }
+.active .track { background: #248555; }
+.active .track span { transform: translateX(12px); background: #fff; }
+.state { font-weight: 600; }
+.error { color: var(--color-error); font-size: var(--text-sm); flex-basis: 100%; }

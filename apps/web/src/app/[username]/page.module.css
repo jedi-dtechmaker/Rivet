@@ -2,7 +2,7 @@
   width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: calc(var(--header-height) + var(--space-8)) var(--space-6) var(--space-12);
+  padding: clamp(20px, 3vw, 40px) clamp(16px, 3vw, 32px) var(--space-12);
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
@@ -42,6 +42,7 @@
   padding: 3px;
   background: var(--color-brand-gradient);
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .avatar {
@@ -58,6 +59,7 @@
   gap: var(--space-2);
   z-index: 1;
   flex: 1;
+  min-width: 0;
 }
 
 .username {
@@ -66,6 +68,7 @@
   color: var(--color-text-primary);
   margin: 0;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .ckb_address {
@@ -86,6 +89,7 @@
   display: flex;
   gap: var(--space-4);
   margin-top: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .stat_pill {
@@ -125,7 +129,7 @@
 
 .repos_grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: var(--space-4);
 }
 
@@ -197,6 +201,7 @@
   border-top: 1px solid var(--color-border);
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
+  flex-wrap: wrap;
 }
 
 .meta_item {
@@ -251,7 +256,7 @@
   }
 
   .repos_grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-3);
   }
   
@@ -271,12 +276,12 @@
   }
 
   .repo_status {
-    font-size: 10px;
+    font-size: 12px;
     padding: 2px 6px;
   }
 
   .repo_meta {
     padding-top: var(--space-2);
-    font-size: 10px;
+    font-size: 12px;
   }
 }

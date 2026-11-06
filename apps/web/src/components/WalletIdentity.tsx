@@ -6,6 +6,7 @@ import { Shield, Wallet, CheckCircle2 } from 'lucide-react';
 import { SovereignPassport } from './SovereignPassport';
 import { RefreshButton } from './RefreshButton';
 import { CotaManifest } from './CotaManifest';
+import { ActionDialog, HelpButton } from './ActionDialog';
 import styles from './WalletIdentity.module.css';
 
 type Registration = {
@@ -53,6 +54,7 @@ export function WalletIdentity() {
   const [notice, setNotice] = useState('');
   const [recordsUpdate, setRecordsUpdate] = useState<RecordsUpdate | null>(null);
   const [manifestEnabled, setManifestEnabled] = useState(false);
+  const [dialog, setDialog] = useState<'wallet' | 'activate' | 'history' | null>(null);
   const identityRequest = useRef<Promise<void> | null>(null);
   const recordsRequest = useRef<Promise<void> | null>(null);
   const approvedProof = useRef<{ id: string; transaction: ccc.TransactionLike } | null>(null);
@@ -152,11 +154,12 @@ export function WalletIdentity() {
       if (identity?.enabled || registered) {
         const result = await fetch('/api/user/cota', { method: 'POST' }).then(readResponse);
         setIdentity(current => current ? { ...current, registration: result.registration } : current);
-        setNotice(result.registration.status === 'confirmed' ? 'Your CoTA identity is active.' : 'Activation submitted. Waiting for testnet confirmation.');
+        setNotice(result.registration.status === 'confirmed' ? 'Your developer identity is active.' : 'Activation submitted. Waiting for testnet confirmation.');
       } else {
         setNotice('Wallet verified. Sponsored identity activation will be available once Rivet enables it.');
       }
       await refresh();
+      setDialog(null);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Activation did not finish. You can retry.');
       await refresh().catch(() => {});
@@ -205,20 +208,16 @@ export function WalletIdentity() {
   return (
     <section id="identity" className={styles.card} aria-labelledby="identity-title">
       <div className={styles.heading}>
-        <Shield size={22} aria-hidden="true" />
-        <h2 id="identity-title">Your on-chain identity</h2>
+        <span className={styles.icon}><Shield size={22} aria-hidden="true" /></span>
+        <div className={styles.headingText}><h2 id="identity-title">Developer identity</h2><span className={styles.badge}>Optional · CKB testnet</span></div>
         {registrationStatus === 'confirmed' && <span className={styles.active} role="status"><CheckCircle2 size={14} aria-hidden="true" /> Active</span>}
-        <span className={styles.badge}>Optional · Testnet</span>
       </div>
-      {registrationStatus !== 'confirmed' && <p className={styles.description}>Connect JoyID to activate your identity. Rivet covers activation; backups work without a wallet.</p>}
-      {connectedAddress && <details><summary>Wallet details</summary><p className={styles.address}>{connectedAddress}</p>
-        {registrationStatus === 'confirmed' && identity?.registration && <a href={identity.registration.explorerUrl} target="_blank" rel="noreferrer">Activation transaction ↗</a>}
-      </details>}
+      {registrationStatus !== 'confirmed' && <p className={styles.description}>Give your backups an identity you own. Rivet covers activation.</p>}
       {identity?.address && identity.address !== connectedAddress && (
-        <p className={styles.address}>{identity.verified ? 'Identity wallet' : 'Previously saved wallet (verification required)'}: {identity.address}</p>
+        <p className={styles.description}>{connectedAddress ? 'Connect your linked identity wallet to make changes.' : 'Your identity is saved. Reconnect your wallet to make changes.'}</p>
       )}
-      {connectedAddress && !isJoyId && !registered && <p id="identity-wallet-help">Your connected wallet is not a CKB testnet JoyID wallet. Choose JoyID in the wallet picker to enable identity activation.</p>}
-      {verified && !registered && <p>Wallet ownership verified.</p>}
+      {connectedAddress && !isJoyId && !registered && <p id="identity-wallet-help" className={styles.description}>Choose a JoyID wallet on CKB testnet to activate your identity.</p>}
+      {verified && !registered && <span className={styles.active}><CheckCircle2 size={14} aria-hidden="true" /> Wallet verified</span>}
       {identity?.registration && registrationStatus !== 'confirmed' && (
         <p role="status">
           {registrationStatus === 'confirmed' ? 'CoTA identity active.' : registrationStatus === 'rejected' ? 'Activation was rejected. Contact Rivet with the transaction below.' : 'Identity activation is awaiting confirmation.'}
@@ -228,11 +227,11 @@ export function WalletIdentity() {
       {registrationStatus === 'confirmed' && (
         <>
           <div className={styles.identityGrid}>
-          <SovereignPassport signer={signer} verified={!!verified && !!isJoyId} disabled={busy} onBusyChange={setBusy} />
           <CotaManifest signer={signer} verified={!!verified} isJoyId={!!isJoyId} disabled={busy} onBusyChange={setBusy} onEnabledChange={setManifestEnabled} />
+          <SovereignPassport signer={signer} verified={!!verified && !!isJoyId} disabled={busy} onBusyChange={setBusy} />
           </div>
-          <details>
-          <summary>Previous signed proof alternative</summary>
+          <ActionDialog open={dialog === 'history'} onClose={() => setDialog(null)} title="Earlier signed proofs">
+          {recordsStatusError && <p role="alert" className={styles.error}>{recordsStatusError}</p>}
           <p>Signed proof anchoring publishes your developer identity and completed public backup proofs in an on-chain transaction approved by JoyID. It preserves your existing CoTA tree and does not store the records in its SMT. The records will be public on testnet. Review the prepared fee before approving; a fee below 0.01 test CKB comes from your existing identity cell.</p>
           {recordsUpdate && <p role="status">
             {recordsUpdate.status === 'blocked' ? recordsUpdate.blockedReason : recordsUpdate.status === 'confirmed' ? 'Signed identity and backup proofs confirmed.' : recordsUpdate.status === 'submitted' ? 'Signed proofs awaiting confirmation.' : recordsUpdate.status === 'rejected' ? 'Identity update rejected. Contact Rivet before retrying.' : 'Signed proof prepared. Review the fee before approving in JoyID.'}
@@ -251,28 +250,53 @@ export function WalletIdentity() {
           {(!manifestEnabled || pendingWitnessProof) && <button type="button" className="btn btn--primary" disabled={busy || !verified || !isJoyId || recordsUpdate?.status === 'rejected' || recordsUpdate?.status === 'submitted'} onClick={syncRecords}>
             {busy ? 'Working…' : recordsUpdate?.status === 'prepared' && recordsUpdate.protocol === 'rivet-witness-v1' ? recordsUpdate.transaction && approvedProof.current?.id !== recordsUpdate.id ? 'Review and approve in JoyID' : 'Retry signed proof submission' : recordsUpdate?.status === 'confirmed' ? 'Sync signed identity proofs' : 'Prepare signed proof'}
           </button>}
-          </details>
+          </ActionDialog>
         </>
       )}
       {notice && <p role="status">{notice}</p>}
-      {(error || identityStatusError || recordsStatusError) && <p role="alert" className={styles.error}>{error || identityStatusError || recordsStatusError}</p>}
-      <div className={styles.actions}>
+      {(error || identityStatusError || (!manifestEnabled && recordsStatusError)) && <p role="alert" className={styles.error}>{error || identityStatusError || recordsStatusError}</p>}
+      <div className={styles.footer}><div className={styles.actions}>
         {!signer ? (
-          <button type="button" className="btn btn--primary" onClick={() => open()}><Wallet size={16} /> Connect Wallet</button>
+          <button type="button" className="btn btn--primary" onClick={() => open()}><Wallet size={16} aria-hidden="true" /> Connect wallet</button>
         ) : (
           <>
             {!registered && (
-              <button type="button" className="btn btn--primary" aria-describedby={connectedAddress && !isJoyId ? 'identity-wallet-help' : undefined} disabled={busy || !identity || !isJoyId || (!!verified && !identity.enabled)} onClick={activate}>
+              <button type="button" className="btn btn--primary" aria-describedby={connectedAddress && !isJoyId ? 'identity-wallet-help' : undefined} disabled={busy || !identity || !isJoyId || (!!verified && !identity.enabled)} onClick={() => setDialog('activate')}>
                 {busy ? 'Activating…' : identity?.enabled ? 'Activate identity' : 'Verify wallet ownership'}
               </button>
             )}
             {!registered && !isJoyId && <button type="button" className="btn btn--secondary" disabled={busy} onClick={chooseJoyId}>Choose JoyID wallet</button>}
-            <button type="button" className="btn btn--secondary" disabled={busy} onClick={() => disconnect()}>Disconnect Wallet</button>
+            <button type="button" className="btn btn--secondary" onClick={() => setDialog('wallet')}>Wallet details</button>
           </>
         )}
         {registrationStatus === 'prepared' && <button type="button" className="btn btn--primary" disabled={busy} onClick={activate}>Retry activation</button>}
-        <RefreshButton label="Refresh status" disabled={busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />
+        {registrationStatus !== 'confirmed' && <RefreshButton label="Check status" disabled={busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />}
+        {registrationStatus === 'confirmed' && (recordsUpdate || recordsStatusError || !manifestEnabled) && <button type="button" className={styles.textButton} onClick={() => setDialog('history')}>Earlier proofs</button>}
       </div>
+      <HelpButton title="Your developer identity">
+        <p>Your GitHub backups work without a wallet. A developer identity is an optional way to link your GitHub account and public backup proofs to a wallet you control.</p>
+        <p>Connect JoyID on CKB testnet, then choose <strong>Activate identity</strong>. JoyID asks you to prove wallet ownership with your passkey. Rivet sponsors the CoTA identity activation.</p>
+        <p>Once active, you can sync backup proofs and optionally mint a developer passport. Passport minting uses your wallet’s test CKB.</p>
+      </HelpButton></div>
+      <ActionDialog open={dialog === 'wallet'} onClose={() => setDialog(null)} title="Your identity wallet" actions={<>
+        <button type="button" className="btn btn--secondary" onClick={() => setDialog(null)}>Done</button>
+        {signer && <button type="button" className="btn btn--secondary" disabled={busy} onClick={async () => { await disconnect(); setDialog(null); }}>Disconnect wallet</button>}
+      </>}>
+        <p><strong>Connected wallet</strong></p><p className={styles.address}>{connectedAddress || 'No wallet connected'}</p>
+        {identity?.address && identity.address !== connectedAddress && <><p><strong>Linked identity wallet</strong></p><p className={styles.address}>{identity.address}</p></>}
+        {identity?.registration && <a href={identity.registration.explorerUrl} target="_blank" rel="noreferrer">View activation transaction ↗</a>}
+        <p>Disconnecting your wallet keeps your existing identity and backups saved.</p>
+      </ActionDialog>
+      <ActionDialog open={dialog === 'activate'} onClose={() => setDialog(null)} title="Activate your developer identity" actions={<>
+        <button type="button" className="btn btn--secondary" onClick={() => setDialog(null)}>{busy ? 'Hide progress' : 'Not now'}</button>
+        <button type="button" className="btn btn--primary" disabled={busy || !isJoyId} onClick={activate}>{busy ? 'Activating…' : identity?.enabled || registered ? 'Activate with JoyID' : 'Verify with JoyID'}</button>
+      </>}>
+        <p>Link your GitHub account to your JoyID wallet. Approve the ownership check with your passkey.</p>
+        <p>{identity?.enabled || registered ? 'Rivet covers activation. Your CoTA identity belongs to your wallet on CKB testnet.' : 'You can verify wallet ownership now. Sponsored identity activation will be available when Rivet enables it.'}</p>
+        <p>Your identity and any backup proofs you choose to publish will be public.</p>
+        {busy && <p role="status">Complete any JoyID prompt, then wait for confirmation.</p>}
+        {error && <p role="alert" className={styles.error}>{error}</p>}
+      </ActionDialog>
     </section>
   );
 }

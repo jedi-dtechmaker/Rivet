@@ -13,6 +13,8 @@ The hosted acceptance run covered GitHub sign-in and wallet-free backup through 
 - Milestone checklist: [Phase One milestones](https://github.com/jedi-dtechmaker/Rivet/blob/main/docs/PHASE_ONE_MILESTONES.md)
 - Latest implementation release in this report: [commit ff5b040](https://github.com/jedi-dtechmaker/Rivet/commit/ff5b040)
 
+## Milestone 1 deliverables
+
 The three Milestone 1 deliverables map to the implementation as follows:
 
 | Deliverable | Delivered behavior | Review evidence |
@@ -20,6 +22,8 @@ The three Milestone 1 deliverables map to the implementation as follows:
 | CoTA onboarding | Rivet-sponsored activation creates a CoTA cell under the developer’s verified JoyID lock; the developer can claim and update identity and backup commitments. | Registration, issuer, claim, and update transactions linked below. |
 | Optional JoyID connection | GitHub backups work without a wallet; connecting JoyID starts account-bound ownership verification before on-chain activation. | Hosted dashboard, wallet-proof implementation, and completed hosted onboarding checks. |
 | Sovereign Passport | A verified manifest snapshot is minted as a wallet-owned Spore digital object, with saved mint plans, exact retries, and public-profile integration. | Passport mint, Spore ID, implementation, and completed ownership/privacy checks linked below. |
+
+## GitHub onboarding and sponsored CoTA identity
 
 Rivet connects repository backup evidence to a developer-controlled on-chain identity. GitHub remains the starting point: a developer signs in and can back up public repositories without first creating or connecting a wallet. The backup flow mirrors repository history, produces a Git bundle, pins it to IPFS, and anchors its commit-set commitment on CKB. Developers who want an on-chain identity can then connect JoyID from the dashboard.
 
@@ -30,6 +34,8 @@ The initial confirmed registration provided 150 test CKB of capacity through Riv
 - Sponsored registration: [CKB Testnet transaction](https://pudge.explorer.nervos.org/transaction/0x7e96a61e9cf8843712e789f8b80bb33bcdcecaa2d0ea0a37bfb6933d1e06f410)
 - Ownership and onboarding implementation: [WalletIdentity](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/apps/web/src/components/WalletIdentity.tsx)
 - Server-side passkey and wallet verification: [wallet-proof.ts](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/apps/web/src/lib/wallet-proof.ts)
+
+## User-owned CoTA manifests and backup proofs
 
 The CoTA manifest lifecycle now supports issuance, owner-approved claim, and subsequent backup updates. A dedicated Rivet issuer creates the metadata records, and the developer claims them into their JoyID-owned CoTA tree. Later updates add completed public backup proofs with explicit JoyID approval. The records commit the full 32-byte manifest root; the exported manifest provides the identity and backup records needed to reconstruct and check that commitment.
 
@@ -46,6 +52,8 @@ Independent manifest verification checks the configured issuer binding, JoyID ow
 - Latest confirmed manifest update: [CKB Testnet transaction](https://pudge.explorer.nervos.org/transaction/0xb7f6c86d899794fd9534338ae77a280946e1d0f8dffef0d53ba099d3b60d4feb)
 - Verification procedure: [CoTA manifest runbook](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/docs/COTA_MANIFEST_RUNBOOK.md)
 - Standalone verifier: [verify-cota-manifest.ts](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/apps/web/scripts/verify-cota-manifest.ts)
+
+### Independent verification
 
 The public testnet identifiers used by this release are:
 
@@ -65,9 +73,13 @@ pnpm --filter @rivet/web exec tsx scripts/verify-cota-manifest.ts \
 
 The verifier reads transaction references from the proof package and retrieves committed transaction data from the selected public RPC. It reconstructs the issuance, claim, and update lineage and checks each backup root against its referenced anchor output. It requires neither Rivet database credentials nor an issuer private key. A proof cannot select its own trusted issuer.
 
+### Backup sync and retry behavior
+
 The dashboard shows one stored public backup, one synced proof, and no newer completed backup awaiting sync. Independent verification of the latest manifest and current passport ownership was included in the completed project acceptance checks.
 
 Existing backups can be reconciled into the manifest without uploading another bundle or producing another backup anchor. Preparation also detects an unchanged confirmed snapshot before reserving another publication operation. Approved transaction bytes are saved for exact retries after an uncertain submission. Live acceptance confirmed that disconnecting, reloading, and reconnecting the same wallet preserves the synchronized state without another transaction or fee when the records are unchanged.
+
+## Sovereign Passport
 
 The Sovereign Passport is implemented as a Spore V2 digital object owned through the developer’s verified JoyID wallet. Its immutable JSON content records the GitHub identity, initial owner lock hash, manifest root, and manifest transaction reference. The passport preserves the verified snapshot selected at mint time; a later backup update can advance the current manifest independently.
 
@@ -87,13 +99,19 @@ The wallet funds the passport from ordinary capacity cells and approves the tran
 
 Mint preparation reserves one saved plan per GitHub identity. Submission validates the approved transaction, persists the first valid signed candidate, and reuses that exact transaction during retries. Live refresh and retry checks returned the same mint without a duplicate mint or additional fee.
 
+### Dashboard and public-profile presentation
+
 Public profiles now have a developer-passport panel that verifies exported manifest references and checks whether the live Spore remains owned by the linked wallet. Private profiles suppress public identity proofs. The dashboard and profile also present a visual passport card, green activation and sync indicators, compact backup statistics, expandable transaction details, and refresh controls with loading, success, and failure feedback.
 
 The current passport’s on-chain content is JSON. The graphic card is an application presentation of that object; its artwork is not embedded in the minted Spore. The implementation does not include a Bitcoin RGB++ binding or a DOB image-renderer protocol.
 
+## Delivery decisions and general availability
+
 Several implementation choices clarify the proposal’s delivery model. Wallet onboarding starts when a developer chooses **Connect Wallet**, rather than being required for the first backup. The CoTA manifest uses the supported metadata lifecycle after an earlier custom extension proved incompatible with the deployed JoyID lock. Historical signed-witness proofs remain available, but they are not counted as satisfying the CoTA SMT storage requirement.
 
 Registration is designed for general use. There is no hardcoded user allowlist, and manifest enrollment has no account cap by default. Identity sponsorship has a separate configurable capacity budget. The shared issuer and collection are Rivet infrastructure used to issue records for eligible users; each developer’s identity cell and passport are associated with their own verified wallet.
+
+## Testing and validation
 
 Automated validation for implementation commit `ff5b040` recorded:
 
@@ -111,9 +129,13 @@ The published tests make the main failure cases reviewable:
 - [Passport tests](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/apps/web/tests/passport.test.cjs) cover content and owner validation, immutable approval boundaries, saved-mint retries, and ordinary-wallet-cell funding selection.
 - [Passport database tests](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/apps/web/tests/passport-database.test.cjs) cover concurrent signature acceptance and repeat additive migrations preserving saved mint bytes. These require disposable PostgreSQL and belong to the environment-dependent integration checks.
 
+### Validation references
+
 - Test sources: [web tests](https://github.com/jedi-dtechmaker/Rivet/tree/ff5b040/apps/web/tests)
 - Release-check workflow: [checks.yml](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/.github/workflows/checks.yml)
 - Acceptance procedure: [Passport and onboarding acceptance](https://github.com/jedi-dtechmaker/Rivet/blob/ff5b040/docs/PASSPORT_AND_ONBOARDING_ACCEPTANCE.md)
+
+### Completed hosted acceptance
 
 Hosted configuration and proof availability have been resolved and checked. The completed Milestone 1 acceptance covers:
 
@@ -123,11 +145,17 @@ Hosted configuration and proof availability have been resolved and checked. The 
 - Independent verification of the latest manifest and current passport ownership, plus public/private profile checks.
 - Consolidation and checking of explorer references and screenshots or video for reviewer inspection.
 
+## Next milestone
+
 The next milestone covers CLI restore tooling and hardening. Initial source commands for backup, status, legacy-proof verification, and exact restore are present, with local recovery checks after removing the original repository. Published cross-platform releases, attribution restore with signed mapping proofs, stronger anchor payloads binding refs and bundle bytes, and live restore acceptance remain ahead.
+
+## Verification scope
 
 Rivet remains on CKB Testnet, with private repository backups disabled in this flow. Its anchors establish repository-state commitments at blockchain checkpoints; they do not certify developer-supplied Git commit dates or guarantee current IPFS availability.
 
 The trust boundaries are explicit: Rivet’s issuer attests the GitHub identity association, the selected CKB RPC supplies committed status and chain data, and the verifier checks the referenced snapshot and its commitments. It is not an independent block-header verifier, and snapshot verification does not establish that no newer CoTA update exists. Current file availability is separate from proof validity.
+
+## Community review
 
 Milestone 1 is ready for community review. Useful independent checks include:
 

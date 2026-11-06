@@ -1,47 +1,29 @@
 import Link from 'next/link';
-import { Search, Compass, Star, TrendingUp, FolderGit2 } from 'lucide-react';
-import styles from './page.module.css';
+import { FolderGit2, GitCommitHorizontal } from 'lucide-react';
+import { findPublicBackups } from '@/lib/public-backups';
+import { ContentPage, EmptyState } from '@/components/ContentPage';
+import styles from '@/components/ContentPage.module.css';
 
-const trendingRepos = [
-  { id: 1, name: 'bitcoin-core', owner: 'satoshi', desc: 'Bitcoin Core integration and backups.', stars: 1204, lang: 'C++' },
-  { id: 2, name: 'ckb-sdk-js', owner: 'nervosnetwork', desc: 'JavaScript SDK for CKB.', stars: 850, lang: 'TypeScript' },
-  { id: 3, name: 'rivet-contracts', owner: 'jedi', desc: 'Smart contracts for the Rivet protocol.', stars: 342, lang: 'Rust' },
-];
+export const metadata = { title: 'Explore public backups · Rivet' };
+export const dynamic = 'force-dynamic';
 
-export default function ExplorePage() {
-  return (
-    <div className={styles.explore_page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}><Compass size={32} /> Explore Rivet</h1>
-        <p className={styles.subtitle}>Discover publicly verified and anchored repositories across the network.</p>
-        
-        <div className={styles.search_bar}>
-          <Search size={20} className={styles.search_icon} />
-          <input type="text" placeholder="Search verified repositories, developers, or technologies..." />
-        </div>
-      </div>
+export default async function ExplorePage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
+  const params = await searchParams;
+  const query = typeof params.q === 'string' ? params.q.trim().slice(0, 200) : '';
+  const requestedPage = Number(params.page || 1);
+  const page = Number.isSafeInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 1000 ? requestedPage : 1;
+  let repositories: Awaited<ReturnType<typeof findPublicBackups>> = [];
+  let unavailable = false;
+  try { repositories = await findPublicBackups(query, page); }
+  catch { unavailable = true; }
+  const hasMore = repositories.length > 24;
 
-      <div className={styles.section}>
-        <h2 className={styles.section_title}><TrendingUp size={20} /> Trending Repositories</h2>
-        <div className={styles.grid}>
-          {trendingRepos.map(repo => (
-            <div key={repo.id} className={styles.repo_card}>
-              <div className={styles.repo_header}>
-                <Link href={`/${repo.owner}/${repo.name}`} className={styles.repo_name}>
-                  {repo.owner} / {repo.name}
-                </Link>
-                <span className="badge badge--success">Verified</span>
-              </div>
-              <p className={styles.repo_desc}>{repo.desc}</p>
-              <div className={styles.repo_meta}>
-                <span className={styles.meta_item}><span className={styles.lang_dot}></span> {repo.lang}</span>
-                <span className={styles.meta_item}><Star size={14} /> {repo.stars}</span>
-                <span className={styles.meta_item}><FolderGit2 size={14} /> View History</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  return <ContentPage title="Discover code with a backup plan." description="Browse public repository backups shared by developers on Rivet. Open a repository to inspect its saved history, or look up its anchor." actions={<Link href="/dashboard" className="btn btn--primary">Back up your own code</Link>}>
+    <form action="/explore" method="get" className={styles.search} role="search"><label htmlFor="explore-query" className="sr-only">Search public repository backups</label><input id="explore-query" type="search" name="q" defaultValue={query} maxLength={200} placeholder="Search owner/repository" /><button type="submit" className="btn btn--primary">Search backups</button>{query && <Link href="/explore">Clear search</Link>}</form>
+    {unavailable ? <EmptyState title="Public backups couldn’t load"><p>The directory is temporarily unavailable. Try again shortly, or open your own dashboard.</p><Link href={`/explore?q=${encodeURIComponent(query)}`} className="btn btn--secondary">Try again</Link></EmptyState>
+      : repositories.length === 0 ? <EmptyState title={query ? 'No public backups match that search' : page > 1 ? 'You’ve reached the end' : 'The public directory starts with you'}><p>{query ? 'Try a repository owner or name. Only completed public backups from public profiles appear here.' : 'Back up a public repository and keep your profile public to make it discoverable here.'}</p><div className={styles.actions}>{query || page > 1 ? <Link href="/explore" className="btn btn--secondary">Browse all public backups</Link> : <Link href="/dashboard" className="btn btn--primary">Create your first backup</Link>}<Link href="/docs#quick-start">Read the quick start →</Link></div></EmptyState>
+      : <section className={styles.section} aria-label="Public backup directory"><h2>{query ? 'Matching backups' : 'Recently updated backups'}</h2><div className={styles.grid}>{repositories.slice(0, 24).map(repository => <article key={repository.id} className={styles.card}><FolderGit2 size={24} aria-hidden="true" /><h3><Link href={`/${repository.fullName}`}>{repository.fullName}</Link></h3><span className="badge badge--success">Backup saved</span><div className={styles.meta}><span><GitCommitHorizontal size={14} aria-hidden="true" /> {repository.commitCount} commits</span><span>Updated {repository.updatedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span></div><Link href={`/verify?q=${encodeURIComponent(repository.fullName)}`}>Check backup anchor →</Link></article>)}</div></section>}
+    {!unavailable && (page > 1 || hasMore) && <nav className={styles.pagination} aria-label="Public backup pages">{page > 1 ? <Link href={`/explore?q=${encodeURIComponent(query)}&page=${page - 1}`} className="btn btn--secondary">Previous</Link> : <span />}<span>Page {page}</span>{hasMore && <Link href={`/explore?q=${encodeURIComponent(query)}&page=${page + 1}`} className="btn btn--secondary">Next</Link>}</nav>}
+    <details className={styles.details}><summary>Which repositories appear here?</summary><div><p>Only completed backups of public repositories whose Rivet owner has a public profile. Private profiles and private repositories are excluded.</p><p>A saved backup entry is not an independent proof of authorship or file availability. Use its anchor lookup or the verification guides for the specific checks you need.</p><Link href="/docs#verification">Read about verification →</Link></div></details>
+  </ContentPage>;
 }

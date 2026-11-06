@@ -1,0 +1,4 @@
+.result { display: grid; gap: 8px; font-size: var(--text-sm); min-width: 0; }
+.progress { display: inline-flex; align-items: center; gap: 8px; color: var(--color-text-secondary); }
+.progress svg { flex-shrink: 0; }
+.note { font-size: var(--text-sm); color: var(--color-text-secondary); }

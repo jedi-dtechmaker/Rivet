@@ -1,11 +1,13 @@
 .card {
-  padding: var(--space-6);
-  margin-bottom: var(--space-8);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  padding: clamp(20px, 3vw, 32px);
+  margin-top: 32px;
+  border: 1px solid var(--color-border-hover);
+  border-radius: 20px;
   background: var(--color-bg-secondary);
   display: grid;
-  gap: var(--space-4);
+  gap: 20px;
+  min-width: 0;
+  scroll-margin-top: calc(var(--header-height) + 20px);
 }
 
 .heading {
@@ -41,14 +43,23 @@
   gap: var(--space-3);
 }
 
-.error {
-  color: var(--color-danger);
-}
+.error { color: var(--color-error); overflow-wrap: anywhere; }
 
 .active { display: inline-flex; align-items: center; gap: 6px; color: #80dfa3; background: #183a2870; border: 1px solid #397a50; border-radius: 999px; padding: 4px 10px; font-size: 12px; }
-.identityGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-.identityGrid > section { min-width: 0; }
-.identityGrid > section > div:first-of-type { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.identityGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.identityGrid > section { min-width: 0; padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-bg-tertiary); }
+.identityGrid > section > div { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .card > details { color: var(--color-text-secondary); font-size: var(--text-sm); }
 .card summary { cursor: pointer; }
-@media (max-width: 760px) { .identityGrid { grid-template-columns: minmax(0, 1fr); } }
+.headingText { display: grid; gap: 4px; flex: 1; }
+.icon { width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-brand-primary); background: var(--color-brand-glow); border-radius: 12px; }
+.footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--color-border); padding-top: 16px; }
+.textButton { min-height: 44px; padding: 8px; color: var(--color-text-secondary); font-size: var(--text-sm); }
+@media (max-width: 900px) { .identityGrid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) {
+  .card { padding: 16px; border-radius: 16px; }
+  .identityGrid > section { padding: 16px; }
+  .footer { align-items: stretch; }
+  .actions { width: 100%; }
+  .actions > button { flex: 1 1 auto; }
+}

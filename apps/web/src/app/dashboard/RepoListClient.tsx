@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, Filter, ShieldCheck, AlertCircle, Clock, Lock, Unlock, Hash, ChevronLeft, ChevronRight, FolderGit2 } from 'lucide-react';
+import { Search, ShieldCheck, AlertCircle, Clock, ChevronLeft, ChevronRight, FolderGit2 } from 'lucide-react';
 import styles from './page.module.css';
 import { BackupButton } from '@/components/BackupButton';
 
@@ -16,7 +16,7 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
   // Calculate summary stats
   const totalRepos = repos.length;
   const backedUpCount = repos.filter((r: any) => r.backupStatus === 'backed_up').length;
-  const pendingCount = repos.filter((r: any) => r.backupStatus === 'pending').length;
+  const pendingCount = repos.filter((repo: any) => repo.backupStatus === 'pending' && !repo.isPrivate).length;
 
   // Filter repos based on search and active tab
   const filteredRepos = useMemo(() => {
@@ -25,7 +25,7 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
     if (activeFilter === 'secured') {
       result = result.filter(repo => repo.backupStatus === 'backed_up');
     } else if (activeFilter === 'pending') {
-      result = result.filter(repo => repo.backupStatus === 'pending');
+      result = result.filter(repo => repo.backupStatus === 'pending' && !repo.isPrivate);
     }
 
     if (!searchQuery.trim()) return result;
@@ -53,10 +53,10 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
   };
 
   return (
-    <>
+    <section aria-label="Your repositories">
       {/* Stats Row / Tabs */}
       <div className={styles.stats}>
-        <div 
+        <button type="button" aria-pressed={activeFilter === 'all'}
           className={styles.stat_card} 
           onClick={() => handleFilterClick('all')}
           style={{ cursor: 'pointer', borderColor: activeFilter === 'all' ? 'var(--color-brand-primary)' : '' }}
@@ -64,10 +64,10 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
           <div className={styles.stat_icon}><FolderGit2 size={24} /></div>
           <div className={styles.stat_info}>
             <div className={styles.stat_value}>{totalRepos}</div>
-            <div className={styles.stat_label}>Total Repositories</div>
+            <div className={styles.stat_label}>All repositories</div>
           </div>
-        </div>
-        <div 
+        </button>
+        <button type="button" aria-pressed={activeFilter === 'secured'}
           className={styles.stat_card} 
           onClick={() => handleFilterClick('secured')}
           style={{ cursor: 'pointer', borderColor: activeFilter === 'secured' ? 'var(--color-brand-primary)' : '' }}
@@ -75,10 +75,10 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
           <div className={`${styles.stat_icon} ${styles['stat_icon--success']}`}><ShieldCheck size={24} /></div>
           <div className={styles.stat_info}>
             <div className={styles.stat_value}>{backedUpCount}</div>
-            <div className={styles.stat_label}>Secured on CKB</div>
+            <div className={styles.stat_label}>Backed up</div>
           </div>
-        </div>
-        <div 
+        </button>
+        <button type="button" aria-pressed={activeFilter === 'pending'}
           className={styles.stat_card} 
           onClick={() => handleFilterClick('pending')}
           style={{ cursor: 'pointer', borderColor: activeFilter === 'pending' ? 'var(--color-brand-primary)' : '' }}
@@ -86,18 +86,20 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
           <div className={`${styles.stat_icon} ${styles['stat_icon--warning']}`}><Clock size={24} /></div>
           <div className={styles.stat_info}>
             <div className={styles.stat_value}>{pendingCount}</div>
-            <div className={styles.stat_label}>Pending Backup</div>
+            <div className={styles.stat_label}>Needs backup</div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Repo List Controls */}
       <div className={styles.controls}>
+        <h2 className={styles.sectionTitle}>Repositories</h2>
         <div className={styles.search_box}>
           <Search size={18} className={styles.search_icon} />
           <input 
             type="text" 
             placeholder="Search repositories..." 
+            aria-label="Search repositories"
             className={styles.search_input}
             value={searchQuery}
             onChange={handleSearchChange}
@@ -130,9 +132,9 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
                   <ShieldCheck size={12} /> Backed Up
                 </span>
               )}
-              {repo.backupStatus === 'pending' && (
+              {repo.backupStatus === 'pending' && !repo.isPrivate && (
                 <span className="badge badge--warning">
-                  <Clock size={12} /> Pending Backup
+                  <Clock size={12} /> Not backed up
                 </span>
               )}
             </div>
@@ -140,7 +142,7 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
             <p className={styles.card__desc}>
               {repo.description}
             </p>
-            {repo.isPrivate && <p role="note">Private repository backup and restore are disabled on testnet. Encrypted private support is planned for a later release.</p>}
+            {repo.isPrivate && <p className={styles.card__desc} role="note">Private backups aren’t available on testnet yet.</p>}
 
             <div className={styles.card__meta}>
               <div className={styles.meta_item}>
@@ -158,10 +160,10 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
                </div>
                {repo.backupStatus === 'backed_up' ? (
                  <div className={styles.footer_backup}>
-                   Secured: {repo.lastBackup}
+                   Backed up {repo.lastBackup}
                    {!repo.deletedOnGithub && !repo.isPrivate && <BackupButton repoFullName={repo.fullName} refresh />}
                  </div>
-               ) : repo.backupStatus === 'pending' ? (
+               ) : repo.backupStatus === 'pending' && !repo.isPrivate ? (
                  <BackupButton repoFullName={repo.fullName} isPrivate={repo.isPrivate} />
                ) : null}
             </div>
@@ -178,7 +180,7 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '2rem' }}>
-          <button 
+          <button type="button" aria-label="Previous page"
             className="btn btn--secondary" 
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -189,7 +191,7 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
           <span style={{ fontSize: '14px', color: 'var(--color-text-dim)' }}>
             Page {currentPage} of {totalPages}
           </span>
-          <button 
+          <button type="button" aria-label="Next page"
             className="btn btn--secondary" 
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -199,6 +201,6 @@ export default function RepoListClient({ repos }: { repos: any[] }) {
           </button>
         </div>
       )}
-    </>
+    </section>
   );
 }

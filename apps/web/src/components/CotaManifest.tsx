@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ccc } from '@ckb-ccc/connector-react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, LoaderCircle } from 'lucide-react';
+import { ActionDialog, HelpButton } from './ActionDialog';
 import styles from './CotaManifest.module.css';
 import { RefreshButton } from './RefreshButton';
 import { ManifestWaitError, waitForManifestStep } from '@/lib/cota-manifest-wait';
@@ -48,12 +49,12 @@ async function readManifest(response: Response): Promise<ManifestState> {
 }
 
 function operationMessage(operation: ManifestOperation) {
-  const label = operation.kind === 'issue' ? 'Metadata issuance' : operation.kind === 'claim' ? 'Manifest claim' : 'Manifest update';
+  const label = operation.kind === 'issue' ? 'Proof setup' : operation.kind === 'claim' ? 'Identity claim' : 'Backup proof update';
   if (operation.status === 'blocked' || operation.status === 'rejected') return operation.error || `${label} needs review before continuing.`;
   if (operation.status === 'confirmed') return `${label} confirmed on CKB testnet.`;
   if (operation.status === 'submitted') return `${label} is awaiting CKB testnet confirmation.`;
   if (operation.status === 'accepted') return `${label} is saved for submission. Retry to continue the saved transaction.`;
-  return operation.kind === 'issue' ? 'Metadata issuance is prepared. Continue to submit Rivet’s sponsored transaction.' : `${label} is prepared. Review the fee and approve with JoyID when ready.`;
+  return operation.kind === 'issue' ? 'Your proof setup is ready. Continue with Rivet’s sponsored transaction.' : `${label} is ready for your approval.`;
 }
 
 export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange, onEnabledChange }: Props) {
@@ -62,7 +63,8 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<'wallet' | 'server' | null>(null);
   const activeWait = useRef<AbortController | null>(null);
-  const [postponed, setPostponed] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [proofOpen, setProofOpen] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const request = useRef<Promise<void> | null>(null);
@@ -96,7 +98,6 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
   useEffect(() => {
     if (state) onEnabledChange?.(state.enabled);
   }, [state, onEnabledChange]);
-  useEffect(() => { setPostponed(false); }, [operation?.id]);
   useEffect(() => {
     if (operation?.status !== 'submitted' && state?.nextStep !== 'wait') return;
     const timer = setInterval(() => {
@@ -113,6 +114,7 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
   const waiting = operation?.status === 'submitted' || (state?.nextStep === 'wait' && !retryable);
   const blocked = operation?.status === 'rejected' || operation?.status === 'blocked' || state?.nextStep === 'blocked';
   const requiresConsent = state?.nextStep === 'issue' && !operation;
+  const reviewKind = operation && operation.status !== 'confirmed' ? operation.kind : state?.nextStep === 'issue' ? 'issue' : state?.nextStep === 'claim' ? 'claim' : 'update';
 
   async function act(action: 'prepare' | 'submit' | 'retry') {
     if (mutation.current || locked || !state || (requiresConsent && !consented)) return;
@@ -152,9 +154,8 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
         body: JSON.stringify({ action, ...(operation ? { operationId: operation.id } : {}), ...(signedTransaction ? { signedTransaction } : {}) }),
       }).then(readManifest), 'server', 60000, controller.signal);
       setState(result);
-      setPostponed(false);
       if (result.operation?.status === 'confirmed') setNotice(operationMessage(result.operation));
-      else if (result.nextStep === 'ready') setNotice('Your confirmed CoTA manifest already includes the latest completed public backups.');
+      else if (result.nextStep === 'ready') setNotice('All your backup proofs are up to date.');
     } catch (failure) {
       if (failure instanceof ManifestWaitError) controller.abort();
       if ((failure as { code?: string })?.code === 'MANIFEST_SIGNATURE_INVALID') approved.current = null;
@@ -172,59 +173,66 @@ export function CotaManifest({ signer, verified, isJoyId, disabled, onBusyChange
 
   return (
     <section className={styles.manifest} aria-labelledby="cota-manifest-title">
-      <h3 id="cota-manifest-title">Backup proofs</h3>
-      {!state && !error && <p role="status">Loading CoTA manifest status…</p>}
-      {state && !state.enabled && <p>CoTA manifest setup is not available yet. Your existing backups continue to work.</p>}
-      {state?.latest && !state.confirmed && <p>{state.latest.backupCount} public backups ready.</p>}
+      <div className={styles.heading}><span className={styles.sectionIcon}><ShieldCheck size={20} aria-hidden="true" /></span><h3 id="cota-manifest-title">Backup proofs</h3></div>
+      {!state && !error && <p role="status" className={styles.description}>Checking your backups…</p>}
+      {state && !state.enabled && <p className={styles.description}>Proof setup is unavailable. Your backups still work.</p>}
+      {state?.latest && !state.confirmed && <p className={styles.description}>{state.latest.backupCount} public backup{state.latest.backupCount === 1 ? '' : 's'} ready to link to your identity.</p>}
       {state?.confirmed && (
-        <div className={styles.review}>
-          <p className={styles.success} role="status"><CheckCircle2 size={16} aria-hidden="true" /> {state.confirmed.backupCount} backup proof{state.confirmed.backupCount === 1 ? '' : 's'} synced</p>
-          {state.nextStep === 'ready' && !state.hasChanges && <span className={styles.success}>Up to date</span>}
-          {state.hasChanges && <p>New backup proofs are ready to sync. Review and approve the update with JoyID.</p>}
-          <details className={styles.details}><summary>Manifest details & proof</summary>
-          <p className={styles.commitment}>Manifest commitment: {state.confirmed.root}</p>
-          {state.hasChanges && <p>Your existing backups can be synced to this manifest. Sync verifies their saved references and asks for JoyID approval; it does not create another backup.</p>}
-          {state.confirmed.explorerUrl && <a href={state.confirmed.explorerUrl} target="_blank" rel="noreferrer">View confirmed CoTA transaction</a>}
-          {state.confirmed.exportUrl && <a href={state.confirmed.exportUrl} download="rivet-cota-manifest-proof.json">Download CoTA manifest proof</a>}
-          </details>
+        <div className={styles.summary}>
+          <strong className={styles.count}>{state.confirmed.backupCount}</strong>
+          <span className={styles.description}>backup proof{state.confirmed.backupCount === 1 ? '' : 's'} linked to your identity</span>
+          {state.nextStep === 'ready' && !state.hasChanges && <span className={styles.success} role="status"><CheckCircle2 size={16} aria-hidden="true" /> All synced</span>}
+          {state.hasChanges && <p className={styles.description}>New backups ready to sync</p>}
         </div>
       )}
-      {requiresConsent && state?.enabled && (
-        <label className={styles.consent}>
-          <input type="checkbox" checked={consented} disabled={busy || disabled} onChange={event => setConsented(event.target.checked)} />
-          <span>Create the two public CoTA metadata records for my developer identity. I will claim them with JoyID and add backup proofs through later updates.</span>
-        </label>
-      )}
-      {operation && operation.status !== 'confirmed' && (
-        <div className={styles.review}>
-          <p role="status">{operationMessage(operation)}</p>
-          {operation.root && <p className={styles.commitment}>Prepared manifest commitment: {operation.root}</p>}
-          {operation.kind !== 'issue' && operation.feeCKB && <p>Transaction fee: {operation.feeCKB} test CKB from your identity cell. Review this amount before approval.</p>}
-          {operation.explorerUrl && <a href={operation.explorerUrl} target="_blank" rel="noreferrer">View {operation.kind === 'issue' ? 'issuance' : operation.kind} transaction</a>}
-          {postponed && <p>The prepared transaction is saved. Resume when you are ready to approve.</p>}
-        </div>
-      )}
+      {waiting && <p className={styles.pending} role="status"><LoaderCircle size={16} className={styles.spinner} aria-hidden="true" /> Confirming on testnet…</p>}
+      {blocked && operation && <p role="alert" className={styles.error}>{operationMessage(operation)}</p>}
       {state?.error && <p role="alert" className={styles.error}>{state.error}</p>}
-      {!canUseWallet && <p>Connect your verified CKB testnet JoyID wallet to prepare or approve a CoTA manifest.</p>}
-      {notice && !(state?.nextStep === 'ready' && !state.hasChanges) && <p role="status">{notice}</p>}
-      {phase === 'wallet' && <p role="status">Waiting for JoyID approval. Check the JoyID popup or browser tab and complete the passkey prompt. If it is stuck, stop waiting and close that window before retrying.</p>}
-      {phase === 'server' && <p role="status">Checking and submitting your saved transaction. You can refresh its status while this request finishes.</p>}
-      {error && <p role="alert" className={styles.error}>{error}</p>}
+      {!canUseWallet && <p className={styles.description}>Connect your identity wallet to make changes.</p>}
+      {notice && !reviewOpen && !(state?.nextStep === 'ready' && !state.hasChanges) && <p role="status">{notice}</p>}
+      {busy && !reviewOpen && <p role="status" className={styles.pending}><LoaderCircle size={16} className={styles.spinner} aria-hidden="true" />{phase === 'wallet' ? 'Approve in the JoyID window…' : 'Saving your update…'}</p>}
+      {error && !reviewOpen && <p role="alert" className={styles.error}>{error}</p>}
       <div className={styles.actions}>
-        {needsApproval && !postponed && <>
-          <button type="button" className="btn btn--primary" disabled={locked} onClick={() => act('submit')}>{busy ? phase === 'wallet' ? 'Waiting for JoyID…' : 'Checking transaction…' : hasSigned ? 'Retry approved transaction' : 'Review and approve in JoyID'}</button>
-          <button type="button" className="btn btn--secondary" disabled={busy || disabled} onClick={() => setPostponed(true)}>Not now</button>
-        </>}
-        {needsApproval && postponed && <button type="button" className="btn btn--primary" disabled={locked} onClick={() => setPostponed(false)}>Resume review</button>}
-        {retryable && !waiting && <button type="button" className="btn btn--primary" disabled={locked} onClick={() => act('retry')}>{busy ? 'Working…' : 'Continue saved transaction'}</button>}
+        {busy && !reviewOpen && <button type="button" className="btn btn--secondary" onClick={() => setReviewOpen(true)}>View progress</button>}
+        {needsApproval && <button type="button" className="btn btn--primary" disabled={locked} onClick={() => setReviewOpen(true)}>Review update</button>}
+        {retryable && !waiting && <button type="button" className="btn btn--primary" disabled={locked} onClick={() => setReviewOpen(true)}>Continue setup</button>}
         {state?.enabled && !needsApproval && !retryable && !waiting && !blocked && (state.nextStep !== 'ready' || state.hasChanges) && (
-          <button type="button" className="btn btn--primary" disabled={locked || (requiresConsent && !consented)} onClick={() => act('prepare')}>
-            {busy ? 'Working…' : state.nextStep === 'issue' ? 'Create CoTA metadata records' : state.nextStep === 'claim' ? 'Prepare JoyID claim' : 'Sync existing backup proofs'}
+          <button type="button" className="btn btn--primary" disabled={locked} onClick={() => setReviewOpen(true)}>
+            {state.nextStep === 'issue' ? 'Set up backup proofs' : state.nextStep === 'claim' ? 'Claim your identity' : 'Sync backup proofs'}
           </button>
         )}
-        {phase === 'wallet' && <button type="button" className="btn btn--secondary" onClick={() => activeWait.current?.abort()}>Stop waiting</button>}
-        <RefreshButton disabled={disabled && !busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />
+        {state?.confirmed && <button type="button" className="btn btn--secondary" onClick={() => setProofOpen(true)}>View proof</button>}
+        <RefreshButton label="Check status" disabled={disabled && !busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />
       </div>
+      <HelpButton title="What are backup proofs?">
+        <p>Backup proofs link your completed public backups to your developer identity on CKB. Your backup files remain on IPFS.</p>
+        <p>Rivet creates the identity records, then you claim them with JoyID. Later, choose <strong>Sync backup proofs</strong> to include newer backups.</p>
+        <p>You review each update and its fee before approving in JoyID. Syncing uses your existing backups without uploading them again.</p>
+        <p>The technical record is called a CoTA manifest. Use <strong>View proof</strong> to inspect or download it.</p>
+      </HelpButton>
+      <ActionDialog open={proofOpen} onClose={() => setProofOpen(false)} title="Your backup proof">
+        <p>{state?.confirmed?.backupCount} public backup proof{state?.confirmed?.backupCount === 1 ? '' : 's'} linked to your identity.</p>
+        <p className={styles.commitment}><strong>Manifest commitment</strong><br />{state?.confirmed?.root}</p>
+        {state?.confirmed?.explorerUrl && <a href={state.confirmed.explorerUrl} target="_blank" rel="noreferrer">View confirmed transaction ↗</a>}
+        {state?.confirmed?.exportUrl && <a href={state.confirmed.exportUrl} download="rivet-cota-manifest-proof.json">Download verification proof</a>}
+      </ActionDialog>
+      <ActionDialog open={reviewOpen} onClose={() => setReviewOpen(false)} title={reviewKind === 'issue' ? 'Set up your backup proofs' : reviewKind === 'claim' ? 'Claim your developer identity' : 'Sync your backup proofs'} actions={<>
+        <button type="button" className="btn btn--secondary" onClick={() => setReviewOpen(false)}>{busy ? 'Hide progress' : state?.nextStep === 'ready' && !state.hasChanges ? 'Done' : 'Not now'}</button>
+        {needsApproval ? <button type="button" className="btn btn--primary" disabled={locked} onClick={() => act('submit')}>{busy ? phase === 'wallet' ? 'Waiting for JoyID…' : 'Saving update…' : hasSigned ? 'Retry submission' : 'Approve in JoyID'}</button>
+          : retryable ? <button type="button" className="btn btn--primary" disabled={locked} onClick={() => act('retry')}>{busy ? 'Working…' : 'Continue setup'}</button>
+          : !waiting && !blocked && (state?.nextStep !== 'ready' || state?.hasChanges) && <button type="button" className="btn btn--primary" disabled={locked || (requiresConsent && !consented)} onClick={() => act('prepare')}>{busy ? 'Preparing…' : requiresConsent ? 'Create backup proofs' : reviewKind === 'claim' ? 'Prepare claim' : 'Prepare update'}</button>}
+      </>}>
+        <p>{reviewKind === 'issue' ? 'Create public records that connect your GitHub identity to your JoyID wallet. You will claim them with JoyID before adding your backup proofs.' : reviewKind === 'claim' ? 'Move your identity records into your own JoyID wallet. Review the prepared transaction before approving.' : 'Link your completed public backups to your identity. Your existing backup files and anchors will be reused.'}</p>
+        {requiresConsent && <label className={styles.consent}><input type="checkbox" checked={consented} disabled={busy || disabled} onChange={event => setConsented(event.target.checked)} /><span>Create the two public CoTA records for my developer identity.</span></label>}
+        {operation && <p role="status">{operationMessage(operation)}</p>}
+        {operation?.kind !== 'issue' && operation?.feeCKB && <div className={styles.review}><strong>Network fee: {operation.feeCKB} test CKB</strong><p>Paid from your existing identity cell.</p></div>}
+        {operation?.root && <details className={styles.details}><summary>Technical details</summary><p className={styles.commitment}>{operation.root}</p></details>}
+        {operation?.explorerUrl && <a href={operation.explorerUrl} target="_blank" rel="noreferrer">View transaction ↗</a>}
+        {phase === 'wallet' && <><p role="status">Open the JoyID window and approve with your passkey.</p><button type="button" className="btn btn--secondary" onClick={() => activeWait.current?.abort()}>Stop waiting</button></>}
+        {phase === 'server' && <p role="status">Checking and submitting your saved transaction…</p>}
+        {notice && <p role="status">{notice}</p>}
+        {error && <p role="alert" className={styles.error}>{error}</p>}
+      </ActionDialog>
     </section>
   );
 }

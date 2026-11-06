@@ -2,8 +2,8 @@ import Link from 'next/link';
 import RepoListClient from './RepoListClient';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { Search, Filter, ShieldCheck, Database, RefreshCw, FolderGit2, Star, Clock, AlertCircle } from 'lucide-react';
-import { BackupButton } from '@/components/BackupButton';
+import { AlertCircle } from 'lucide-react';
+import { HelpButton } from '@/components/ActionDialog';
 import { SyncButtonClient } from './SyncButtonClient';
 import { AutoSyncToggle } from '@/components/AutoSyncToggle';
 import { WalletIdentity } from '@/components/WalletIdentity';
@@ -103,22 +103,23 @@ export default async function Dashboard() {
       {/* Dashboard Header & Stats */}
       <div className={styles.header}>
         <div className={styles.header__content}>
-          <h1 className={styles.title}>Dashboard</h1>
+          <h1 className={styles.title}>Your backups</h1>
           <p className={styles.subtitle}>
-            Manage your repositories and backups — CKB anchor fees are sponsored by Rivet
+            Your code, safely backed up. Rivet covers backup fees.
           </p>
         </div>
 
         <div className={styles.actions}>
           {dbUser && <AutoSyncToggle initialAutoSync={dbUser.autoSync} />}
           <SyncButtonClient />
-          <button className="btn btn--primary">
-            <Database size={16} /> Backup All
-          </button>
+          <HelpButton title="Back up your repositories" label="Quick guide">
+            <p>Choose a public repository and select <strong>Back up now</strong>. Rivet saves its Git history to IPFS and records a proof on CKB testnet.</p>
+            <p><strong>Refresh repositories</strong> reloads your GitHub repository list. <strong>Update backup</strong> saves a newer version of a repository you have already backed up.</p>
+            <p><strong>Auto-backup</strong> starts backups when Rivet receives GitHub push events for your repositories.</p>
+            <p>You can back up without connecting a wallet. The optional developer identity section links backup proofs to your JoyID wallet.</p>
+          </HelpButton>
         </div>
       </div>
-
-      <WalletIdentity />
 
       {githubError && (
         <div style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -131,6 +132,7 @@ export default async function Dashboard() {
       )}
 
       <RepoListClient repos={repos} />
+      <WalletIdentity />
     </div>
   );
 }
