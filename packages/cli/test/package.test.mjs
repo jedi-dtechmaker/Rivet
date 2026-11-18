@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
 import { createCipheriv, randomBytes } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, writeFile, rm, access } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm, access, realpath } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -102,7 +102,7 @@ test('packed CLI installs offline and logs in, detects another project, backs up
     const recoveryDirectory = join(directory, 'recovery'); await mkdir(recoveryDirectory);
     const result = JSON.parse(await run(['restore', 'Owner/project', '--bundle', encryptedFile, '--rpc', rpcUrl], recoveryDirectory));
     assert.equal(result.valid, true); assert.equal(result.bare, true); assert.deepEqual(result.refs, refs);
-    assert.equal(result.restored, join(recoveryDirectory, 'project-restored.git'));
+    assert.equal(await realpath(result.restored), await realpath(join(recoveryDirectory, 'project-restored.git')));
     await git(['fsck', '--full', '--strict'], result.restored);
     await run(['logout'], directory);
     const offline = JSON.parse(await run(['verify', '--proof', recovery, '--bundle', encryptedFile, '--rpc', rpcUrl], directory,

@@ -10,4 +10,4 @@ Attribution requires Python 3 and git-filter-repo 2.47.0. Standalone executables
 
 The hosted server/worker rollout and live testnet acceptance remain pending. Saved login needs the new `/api/cli/account` route, and the worker changes require the additive worker-job schema and `/api/backup/job`. Read the CLI guide and worker runbook before rollout. This preview does not mark the grant milestone complete.
 
-[CLI installation and usage guide](https://github.com/jedi-dtechmaker/Rivet/blob/cli-v0.1.0-rc.1/packages/cli/README.md).
+[CLI installation and usage guide](https://github.com/jedi-dtechmaker/Rivet/blob/cli-v0.1.0-rc.2/packages/cli/README.md).
