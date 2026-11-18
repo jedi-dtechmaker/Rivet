@@ -1,6 +1,7 @@
 import { ccc } from '@ckb-ccc/core';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
+import { retryRead, responseError } from '../../../../packages/cli/src/retry.mjs';
 
 export class CkbHttpTransport implements ccc.JsonRpcTransport {
   private readonly endpoint: URL;
@@ -13,7 +14,7 @@ export class CkbHttpTransport implements ccc.JsonRpcTransport {
   async request(payload: ccc.JsonRpcPayload): Promise<ccc.JsonRpcResponse> {
     const send = this.endpoint.protocol === 'https:' ? httpsRequest : httpRequest;
     const body = JSON.stringify(payload);
-    return new Promise((resolve, reject) => {
+    const perform = () => new Promise<ccc.JsonRpcResponse>((resolve, reject) => {
       const request = send(this.endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
@@ -26,16 +27,18 @@ export class CkbHttpTransport implements ccc.JsonRpcTransport {
         response.on('error', reject);
         response.on('end', () => {
           if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
-            reject(new Error('CKB testnet RPC is unavailable. Please retry shortly.'));
+            reject(responseError({ status: response.statusCode || 503, headers: new Headers({ 'retry-after': String(response.headers['retry-after'] || '') }) }, 'CKB testnet RPC is unavailable. Please retry shortly.'));
             return;
           }
           try { resolve(JSON.parse(content)); }
           catch { reject(new Error('CKB testnet RPC returned an invalid response.')); }
         });
       });
-      request.on('error', error => reject(new Error('CKB testnet RPC could not be reached. Please retry shortly.', { cause: error })));
+      request.on('error', error => reject(Object.assign(new Error('CKB testnet RPC could not be reached. Please retry shortly.', { cause: error }), { transient: true })));
       request.end(body);
     });
+    // JSON-RPC uses HTTP POST for both reads and writes. Only RPC read methods can be replayed here.
+    return payload.method.startsWith('get_') ? retryRead(perform) : perform();
   }
 }
 

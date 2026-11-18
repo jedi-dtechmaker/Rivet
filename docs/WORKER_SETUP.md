@@ -39,6 +39,10 @@ Worker attempts are reserved under a PostgreSQL advisory lock before GitHub disp
 
 The backup workflow serializes access to its shared treasury using one concurrency group and `queue: max`, retaining up to 100 waiting runs. Monitor queued runs; work above the GitHub queue limit can be canceled. It uses Node 24 and pnpm 12.4.2, matching the release configuration. The restore worker uses mirror cloning so all original branches and tags are preserved.
 
+Milestone 2 source workers emit [v2 backup anchors](./BACKUP_ANCHOR_V2.md). Deploy the app readers and CLI together with the worker update; older readers accept only 32-byte roots. The first v2 update consumes and enlarges the legacy anchor cell, so the treasury needs additional capacity plus fees. Later backups preserve one successor cell. No database migration is needed for this format change.
+
+If the previous anchor is spent, malformed or unavailable, the worker stops. It also stops after an uncertain submission instead of trying a fresh cell. Before retrying, inspect the workflow's transaction and the repository's saved `ckbCellOutpoint`, recover a confirmed successor and its matching CID/recovery material, and reconcile the saved record. Do not clear the predecessor to bypass this check. Queued runs may carry a predecessor captured before an earlier run finished; automatic reconciliation is tracked in Milestone 2 hardening.
+
 Auto Sync reports webhook permission/configuration failures instead of claiming success. Sign out and sign back in after this update to grant the added `admin:repo_hook` OAuth scope. The GitHub account still needs repository admin permission to manage hooks; private repositories are skipped when enabling Auto Sync.
 
 ## A completed backup disappears after refresh
@@ -46,3 +50,17 @@ Auto Sync reports webhook permission/configuration failures instead of claiming 
 The dashboard reads saved backups for the signed-in GitHub account. Rivet now registers a repository under that account before dispatching the worker, and the callback updates that existing record. It rejects unregistered callbacks instead of assigning them to an arbitrary user. Deploy the updated app before starting a new backup; the worker workflow does not need changing for this fix.
 
 If a backup created by an older version shows **Anchored** during polling but returns to **Pending Backup** after refresh, inspect the repository record's `userId`. The old callback could attach a new repository to the first database user. Verify the requesting account before correcting that association; preserve the saved transaction hash, IPFS CID, encryption fields, cell outpoint, and completion timestamp. A display or ownership repair does not require another on-chain backup.
+
+## Milestone 2 durable backup jobs
+
+Deploy the new `/api/backup/job` and `/api/cli/account` routes together with the updated worker. Apply `node scripts/setup-worker-dispatch.mjs` from `apps/web` before enabling dispatch. This additive migration adds repository/state/checkpoint fields to `WorkerDispatch` and the `BackupDelivery` table. Drain existing worker runs before switching versions: legacy workers do not save the signed checkpoints required by the new callback protocol. Hosted rollout is deferred by the project owner as of November 18, 2026.
+
+A repository has one active queued/prepared job under the existing PostgreSQL advisory lock. Reservation reads the current saved anchor head; stale caller snapshots do not start a second chain. Repeated webhook delivery IDs resolve to their original job. New pushes during an active job mark it for one follow-up, dispatched from the confirmed successor with a stable delivery ID.
+
+Before broadcasting, the worker saves the signed transaction, proof result and private recovery material through the authenticated job endpoint. A resumed worker reads that checkpoint first, checks the saved hash on CKB, and reuses its exact signed bytes if submission is needed. Confirmation updates the repository only when its predecessor still matches; completed callback replays acknowledge the saved result without overwriting newer backups. Checkpoints and encryption material stay in private server storage and must not be uploaded as public Actions artifacts.
+
+For an interrupted or uncertain run, rerun the same Actions run. If GitHub never created a run after a lost dispatch response, manually dispatch `backup.yml` with the existing job ID, original repository and configured callback URL. The authenticated job endpoint provides the saved predecessor/checkpoint; the workflow input cannot replace it. Do not create another job ID, clear a prepared reservation or rebuild its transaction to bypass a pending submission. Definitive failures before signing can be replaced through an ordinary new backup. A prepared transaction that is rejected or conflicts with an external spend needs operator reconciliation of its saved inputs; it is intentionally retained.
+
+Read requests retry bounded transient outages/rate limits. Workflow creation and transaction sends are not blindly retried. Callback and checkpoint writes are replay-safe. Existing hook setup reactivates hooks, refreshes their shared secret and follows GitHub pagination with bounded concurrency.
+
+Release artifacts are built by `.github/workflows/cli-release.yml`. A `cli-v*` tag runs package and native tests on Linux, macOS and Windows; only a fully passing matrix can publish the preview release. These fixture/platform runs do not replace the live testnet acceptance in `MILESTONE_TWO_PLAN.md`.

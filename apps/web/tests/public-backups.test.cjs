@@ -3,6 +3,7 @@ const { test, afterEach, mock } = require('node:test');
 const { ccc } = require('@ckb-ccc/core');
 const { prisma } = require('../src/lib/db.ts');
 const { findPublicBackups, findPublicBackup, checkPublicBackupAnchor } = require('../src/lib/public-backups.ts');
+const { encodeBackupAnchor } = require('../../../packages/cli/src/anchor.mjs');
 
 afterEach(() => mock.restoreAll());
 
@@ -57,4 +58,17 @@ test('pending, rejected and unavailable chain data never produce a confirmed res
   assert.deepEqual(await checkPublicBackupAnchor(backup, { getTransaction: async () => { throw new Error('RPC outage'); } }), { status: 'unavailable' });
   const invalid = ccc.Transaction.from({ outputs: transaction.outputs, outputsData: ['0x1234'] });
   assert.deepEqual(await checkPublicBackupAnchor({ ckbTxHash: invalid.hash(), ckbCellOutpoint: `${invalid.hash()}:0` }, { getTransaction: async () => ({ status: 'committed', transaction: invalid }) }), { status: 'invalid' });
+});
+
+test('public lookup accepts v2 anchors only when saved CID and count agree with the committed payload', async () => {
+  const ipfsCid = `bafy${'a'.repeat(40)}`;
+  const anchored = ccc.Transaction.from({ outputs: transaction.outputs, outputsData: [encodeBackupAnchor({
+    merkleRoot: transaction.outputsData[0], refsHash: `0x${'56'.repeat(32)}`, bundleSha256: `0x${'78'.repeat(32)}`, commitCount: 2, ipfsCid,
+  })] });
+  const reference = { ckbTxHash: anchored.hash(), ckbCellOutpoint: `${anchored.hash()}:0`, lastBackupCid: ipfsCid, commitCount: 2 };
+  const client = { getTransaction: async () => ({ status: 'committed', transaction: anchored }) };
+  assert.deepEqual(await checkPublicBackupAnchor(reference, client), { status: 'confirmed', root: transaction.outputsData[0], blockHeight: null });
+  for (const changed of [{ lastBackupCid: `bafy${'b'.repeat(40)}` }, { commitCount: 3 }]) {
+    assert.deepEqual(await checkPublicBackupAnchor({ ...reference, ...changed }, client), { status: 'invalid' });
+  }
 });

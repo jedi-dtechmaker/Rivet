@@ -7,6 +7,7 @@ const { buildSmt, EMPTY_ROOT } = require('../src/lib/cota-smt.ts');
 const { buildManifest, manifestTokenKeys, manifestHeldLeaves } = require('../src/lib/cota-manifest.ts');
 const { deriveManifestCollectionId, prepareManifestDefine, prepareManifestMint, prepareManifestClaim, prepareManifestUpdate } = require('../src/lib/cota-manifest-chain.ts');
 const { MANIFEST_PROOF_PROTOCOL, parseManifestProofPackage, verifyManifestProofPackage } = require('../src/lib/cota-manifest-verify.ts');
+const { encodeBackupAnchor } = require('../../../packages/cli/src/anchor.mjs');
 
 const hex = value => `0x${value.toString('hex')}`;
 const bytes = value => Buffer.from(value.slice(2), 'hex');
@@ -59,7 +60,7 @@ function partialProof(leaves, queried) {
   return { root, proof: Buffer.from(proof) };
 }
 
-async function fixture({ wrongAnchor = false, detachedUpdate = false } = {}) {
+async function fixture({ wrongAnchor = false, detachedUpdate = false, anchorV2 = false, wrongCid = false, wrongCount = false } = {}) {
   const issuer = ccc.Script.from({ codeHash: `0x${'11'.repeat(32)}`, hashType: 'type', args: `0x${'22'.repeat(20)}` });
   const joyId = TESTNET_SCRIPTS[ccc.KnownScript.JoyId];
   const owner = ccc.Script.from({ codeHash: joyId.codeHash, hashType: joyId.hashType, args: `0x0001${'44'.repeat(20)}` });
@@ -92,10 +93,13 @@ async function fixture({ wrongAnchor = false, detachedUpdate = false } = {}) {
   remember(signed(defined.transaction));
   const issueSource = cell(defined.transaction);
   const backupRoot = `0x${'ab'.repeat(32)}`;
+  const ipfsCid = `bafy${'a'.repeat(40)}`;
+  const anchorData = anchorV2 ? encodeBackupAnchor({ merkleRoot: backupRoot, refsHash: `0x${'cc'.repeat(32)}`,
+    bundleSha256: `0x${'dd'.repeat(32)}`, ipfsCid, commitCount: 3 }) : backupRoot;
   const anchor = remember(ccc.Transaction.from({ inputs: [{ previousOutput: { txHash: `0x${'aa'.repeat(32)}`, index: 0 } }],
-    outputs: [{ lock: issuer, capacity: ccc.fixedPointFrom(100) }], outputsData: [backupRoot] }));
-  const backup = repositoryId => ({ repositoryId, repository: `generated/repo-${repositoryId}`, ipfsCid: 'bafy-generated-proof',
-    merkleRoot: wrongAnchor ? `0x${'cd'.repeat(32)}` : backupRoot, anchorOutpoint: `${anchor.hash()}:0`, commitCount: 3 });
+    outputs: [{ lock: issuer, capacity: ccc.fixedPointFrom(300) }], outputsData: [anchorData] }));
+  const backup = repositoryId => ({ repositoryId, repository: `generated/repo-${repositoryId}`, ipfsCid: wrongCid ? `bafy${'b'.repeat(40)}` : ipfsCid,
+    merkleRoot: wrongAnchor ? `0x${'cd'.repeat(32)}` : backupRoot, anchorOutpoint: `${anchor.hash()}:0`, commitCount: wrongCount ? 4 : 3 });
   const initialManifest = buildManifest({ network: 'ckb-testnet', ownerLockHash: owner.hash(), issuerLockHash: issuer.hash(), githubId: '1001',
     collectionId, indexes: [0, 1], githubUsername: 'generated', backups: [backup('2001')] });
   const sourceSlice = Buffer.from(issueSource.outPoint.toBytes()).subarray(12);
@@ -158,6 +162,13 @@ test('an initial claim is independently verifiable before any later update', asy
   value.proof.manifestTxHash = value.claim.hash();
   value.proof.manifestRoot = value.initialManifest.root;
   assert.equal((await verify(value)).backupCount, 1);
+});
+
+test('CoTA verification supports v2 anchors and rejects issuer-attested CID or count substitutions', async () => {
+  assert.equal((await verify(await fixture({ anchorV2: true }))).valid, true);
+  for (const changed of [{ wrongCid: true }, { wrongCount: true }, { wrongAnchor: true }]) {
+    await assert.rejects(() => fixture({ anchorV2: true, ...changed }).then(verify), /committed CKB anchor/);
+  }
 });
 
 test('a proof cannot choose its own trusted issuer or substitute another GitHub identity', async () => {

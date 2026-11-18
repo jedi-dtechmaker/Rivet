@@ -1,5 +1,6 @@
 import { prisma, readWithConnectionRetry } from './db';
 import { createTestnetClient } from './ckb-server';
+import { checkBackupAnchor } from './backup-anchor';
 
 const publicBackupWhere = {
   isPrivate: false,
@@ -48,8 +49,11 @@ export async function checkPublicBackupAnchor(backup: PublicBackup, client = cre
     if (result?.status === 'rejected') return { status: 'invalid' };
     if (!result || result.status !== 'committed') return { status: 'pending' };
     if (result.transaction.hash().toLowerCase() !== backup.ckbTxHash.toLowerCase()) return { status: 'invalid' };
-    const root = result.transaction.outputsData[outputIndex];
-    if (!result.transaction.outputs[outputIndex] || !/^0x[0-9a-f]{64}$/i.test(root || '')) return { status: 'invalid' };
+    if (!result.transaction.outputs[outputIndex]) return { status: 'invalid' };
+    let root: string;
+    try {
+      root = checkBackupAnchor(result.transaction.outputsData[outputIndex], { ipfsCid: backup.lastBackupCid ?? undefined, commitCount: backup.commitCount }).merkleRoot;
+    } catch { return { status: 'invalid' }; }
     const header = result.blockHash ? await client.getHeaderByHash(result.blockHash) : undefined;
     return { status: 'confirmed', root, blockHeight: header?.number.toString() || null };
   } catch { return { status: 'unavailable' }; }

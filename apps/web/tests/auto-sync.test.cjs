@@ -57,3 +57,35 @@ test('missing webhook configuration prevents enabling Auto Sync', async () => {
   assert.equal((await route.POST(request(true))).status, 503);
   assert.equal(save.mock.callCount(), 0);
 });
+
+test('re-enabling Auto Sync reactivates an existing hook and refreshes its shared secret', async () => {
+  mock.method(db, 'updateUserSettings', async () => ({}));
+  let patched = false;
+  mock.method(globalThis, 'fetch', async (url, options) => {
+    if (!options.method) return Response.json([{ id: 42, active: false, config: { url: 'https://rivet.example/api/webhook/github' } }]);
+    assert.equal(url, 'https://api.github.com/repos/owner/public/hooks/42');
+    assert.equal(options.method, 'PATCH');
+    const body = JSON.parse(options.body);
+    assert.equal(body.active, true); assert.deepEqual(body.events, ['push']); assert.equal(body.config.secret, 'test-hook-secret');
+    patched = true; return Response.json({});
+  });
+  assert.equal((await route.POST(request(true))).status, 200); assert.ok(patched);
+});
+
+test('hook lookup follows pagination and rejects cross-origin links before forwarding a token', async () => {
+  mock.method(db, 'updateUserSettings', async () => ({}));
+  let reads = 0, writes = 0;
+  mock.method(globalThis, 'fetch', async (url, options) => {
+    if (!options.method) {
+      if (++reads === 1) return Response.json([], { headers: { link: '<https://api.github.com/repos/owner/public/hooks?page=2>; rel="next"' } });
+      assert.match(url, /page=2/); return Response.json([{ id: 99, config: { url: 'https://rivet.example/api/webhook/github' } }]);
+    }
+    assert.equal(options.method, 'PATCH'); writes++; return Response.json({});
+  });
+  assert.equal((await route.POST(request(true))).status, 200); assert.equal(reads, 2); assert.equal(writes, 1);
+  mock.method(globalThis, 'fetch', async url => {
+    assert.equal(new URL(url).origin, 'https://api.github.com');
+    return Response.json([], { headers: { link: '<https://foreign.example/hooks>; rel="next"' } });
+  });
+  assert.equal((await route.POST(request(true))).status, 502);
+});

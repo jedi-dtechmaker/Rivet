@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { ccc } = require('@ckb-ccc/core');
 const { reconcileManifestBackups } = require('../src/lib/cota-manifest-backups.ts');
+const { encodeBackupAnchor } = require('../../../packages/cli/src/anchor.mjs');
 
 function fixture(overrides = {}) {
   const lock = { codeHash: `0x${'11'.repeat(32)}`, hashType: 'type', args: '0x1234' };
@@ -35,6 +36,16 @@ test('complete metadata requires no reconciliation or external requests', async 
   f.options.readRepository = async () => assert.fail('Unexpected GitHub request');
   await f.run();
   assert.equal(f.writes.length, 0);
+});
+
+test('v2 anchor outpoints can be recovered without issuing a new backup', async () => {
+  const f = fixture({ githubNumericId: '2001', lastBackupCid: `bafy${'a'.repeat(40)}` });
+  f.transaction.outputsData[0] = encodeBackupAnchor({ merkleRoot: f.transaction.outputsData[0], refsHash: `0x${'55'.repeat(32)}`,
+    bundleSha256: `0x${'66'.repeat(32)}`, commitCount: f.repo.commitCount, ipfsCid: f.repo.lastBackupCid });
+  f.repo.ckbTxHash = f.transaction.hash();
+  f.options.readRepository = async () => assert.fail('Immutable repository ID already saved');
+  await f.run();
+  assert.equal(f.writes[0].data.ckbCellOutpoint, `${f.transaction.hash()}:0`);
 });
 
 test('legacy migration rejects another owner, recreated repositories, and unknown creation dates', async t => {

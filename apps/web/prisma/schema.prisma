@@ -102,11 +102,24 @@ model WorkerDispatch {
   id        String   @id
   userId    String
   kind      String
+  repository String?
+  previousOutpoint String?
+  state String @default("queued")
+  checkpoint Json?
+  dirty Boolean @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([repository, state])
+}
+
+model BackupDelivery {
+  id String @id
+  repository String
+  jobId String
+  createdAt DateTime @default(now())
 }
 
 // One reservation for an actual CoTA cell, shared by all publication protocols.

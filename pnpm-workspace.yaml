@@ -15,6 +15,8 @@ allowBuilds:
 patchedDependencies:
   '@ckb-ccc/connector@2.2.2': patches/@ckb-ccc__connector@2.2.2.patch
 overrides:
+  # Rivet uses browser WebRTC. The React Native adapter and its Metro toolchain are unused.
+  '@libp2p/webrtc>react-native-webrtc': '-'
   postcss@<8.5.23: 8.5.23
   source-map-js@<1.2.2: 1.2.2
   shell-quote@<1.11.0: 1.11.0

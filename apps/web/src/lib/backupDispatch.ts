@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { reserveWorkerDispatch } from '@/lib/worker-quota';
+import { prisma } from '@/lib/db';
 
 /**
  * Dispatches jobs to the Rivet GitHub Actions workers.
@@ -19,7 +20,7 @@ import { reserveWorkerDispatch } from '@/lib/worker-quota';
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 export type DispatchResult =
-  | { ok: true; jobId: string; runUrl: string; startedAt: string }
+  | { ok: true; jobId: string; runUrl: string; startedAt: string; coalesced?: boolean; dispatchUncertain?: boolean }
   | { ok: false; status: number; error: string };
 
 export function isValidRepoFullName(value: unknown): value is string {
@@ -65,6 +66,7 @@ export async function dispatchWorkflow(opts: {
   token?: string;
   userId: string;
   kind: 'backup' | 'restore';
+  backup?: { repository: string; previousOutpoint?: string | null; deliveryId?: string };
 }): Promise<DispatchResult> {
   const target = resolveWorkflowRepo();
 
@@ -86,8 +88,10 @@ export async function dispatchWorkflow(opts: {
   if (process.env.RIVET_WORKERS_ENABLED === 'false') return { ok: false, status: 503, error: 'Backup and restore workers are temporarily paused.' };
   if (!opts.userId) return { ok: false, status: 401, error: 'Sign in before starting a worker.' };
   try {
-    const quota = await reserveWorkerDispatch(opts.userId, jobId, opts.kind);
+    const quota = await reserveWorkerDispatch(opts.userId, jobId, opts.kind, opts.backup);
     if (!quota.allowed) return { ok: false, status: 429, error: quota.error };
+    if (quota.existing) return { ok: true, jobId: quota.existing.id, startedAt: quota.existing.createdAt.toISOString(),
+      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}`, coalesced: true };
   } catch {
     console.error('[dispatch] Worker budget storage is unavailable');
     return { ok: false, status: 503, error: 'Could not check the worker budget. Please retry shortly.' };
@@ -114,6 +118,13 @@ export async function dispatchWorkflow(opts: {
 
     // Success is 204 No Content.
     if (!res.ok) {
+      if (res.status >= 500) return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true,
+        runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}` };
+      // Only a definitive rejection releases the repository. A timeout or 5xx may have queued the workflow.
+      if (res.status >= 400 && res.status < 500) {
+        try { await prisma.workerDispatch.updateMany({ where: { id: jobId, state: 'queued' }, data: { state: 'failed' } }); }
+        catch { console.error('[dispatch] Could not release rejected job; reconcile', jobId); }
+      }
       console.error(`[dispatch] ${opts.workflowFile} failed (${res.status})`);
 
       const hint =
@@ -135,8 +146,9 @@ export async function dispatchWorkflow(opts: {
       startedAt: new Date().toISOString(),
     };
   } catch (e: any) {
-    console.error('[dispatch] Error reaching GitHub:', e);
-    return { ok: false, status: 502, error: 'Could not reach GitHub to start the worker' };
+    console.error('[dispatch] GitHub dispatch response is uncertain; retaining job', jobId);
+    return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true,
+      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}` };
   }
 }
 
@@ -149,6 +161,7 @@ export async function dispatchBackup(
   repoFullName: string,
   userId: string,
   previousOutpoint?: string | null,
+  options: { deliveryId?: string } = {},
 ): Promise<DispatchResult> {
   const appUrl = resolveAppUrl();
   if (!appUrl) {
@@ -158,6 +171,7 @@ export async function dispatchBackup(
 
   return dispatchWorkflow({
     userId, kind: 'backup',
+    backup: { repository: repoFullName, previousOutpoint, ...options },
     workflowFile: env('RIVET_BACKUP_WORKFLOW', 'PROOF_BACKUP_WORKFLOW') || 'backup.yml',
     inputs: {
       repoFullName,

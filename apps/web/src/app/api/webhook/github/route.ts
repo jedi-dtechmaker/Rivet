@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
       repoFullName,
       user.id,
       existingRepo?.ckbCellOutpoint ?? undefined,
+      { deliveryId: req.headers.get('x-github-delivery') || undefined },
     );
 
     if (!result.ok) {

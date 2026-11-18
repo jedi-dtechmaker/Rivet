@@ -2,7 +2,7 @@
 
 > **Your code. Your keys. Your rivet. Forever.**
 
-Rivet is a decentralized developer platform that **backs up, timestamps, and restores** your entire GitHub history using blockchain technology. It ensures that no matter what happens — a suspension, a hacked account, a forgotten password — your code, commit history, and rivet of authorship are permanently secured and fully restorable.
+Rivet backs up public GitHub repository history to encrypted IPFS bundles, anchors its commitments on CKB testnet, and restores verified Git mirrors. Export a private recovery file to recover independently of GitHub and Rivet.
 
 ---
 
@@ -15,7 +15,7 @@ Developers build their careers on platforms they don't control:
 - **No cryptographic rivet of authorship** — git commits can be forged, timestamps can be faked
 - **Your contribution graph and reputation are rented**, not owned — one policy change and it's gone
 
-**Rivet fixes this.** Your code is backed up to decentralized storage, your history is anchored on-chain with immutable timestamps, and if you ever lose access, everything can be restored to a new account — with original dates, commit messages, and full history intact.
+Rivet anchors repository state by a CKB block height. Exact restore preserves the stored commit IDs, dates and messages; the anchor does not certify commit dates or authorship. IPFS availability depends on retaining and serving the bundle. Local-only commits and working files are outside the hosted backup scope.
 
 ---
 
@@ -23,12 +23,12 @@ Developers build their careers on platforms they don't control:
 
 | Feature | Description |
 |---|---|
-| **Backup** | Mirrors your entire GitHub history (every branch, tag, commit) to IPFS/Arweave |
-| **Anchor** | Writes a cryptographic rivet (Merkle root) to a CKB Cell — immutable, permanent |
+| **Backup** | Mirrors pushed public GitHub history, including branches and tags, to encrypted IPFS bundles |
+| **Anchor** | Commits repository state in a CKB transaction; later backups consume and replace the repository's anchor cell |
 | **View** | Browse your backed-up code on the Rivet web platform — files, commits, history |
 | **Restore** | Push everything to a new GitHub account with **original timestamps preserved** |
-| **Verify** | Anyone can verify your authorship by checking the on-chain CKB rivet |
-| **Own** | Your "Sovereign Passport" is an RGB++ asset — your reputation, owned by you |
+| **Verify** | Independently check repository commitments against CKB; developer identity has a separate optional CoTA proof |
+| **Own** | Mint an optional JoyID-owned Spore passport on testnet |
 
 ---
 

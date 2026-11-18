@@ -1,113 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
-import { db } from '@/lib/db';
-
-/**
- * Receives the result of a backup job from the GitHub Actions worker and
- * persists it. Authenticated with a shared secret header.
- */
-
-const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-
-function secretMatches(provided: string | null, expected: string): boolean {
-  if (!provided) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
+import { prisma } from '@/lib/db';
+import { workerAuthorized } from '@/lib/worker-auth';
+import { completeBackupJob } from '@/lib/backup-jobs';
+import { dispatchBackup, isValidRepoFullName } from '@/lib/backupDispatch';
 
 export async function POST(req: NextRequest) {
+  if (!workerAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    // A dedicated secret is preferred. NEXTAUTH_SECRET is accepted as a
-    // fallback so the setup needs no brand-new value.
-    const expected = process.env.BACKUP_CALLBACK_SECRET || process.env.NEXTAUTH_SECRET;
-    if (!expected) {
-      console.error(
-        '[backup/callback] Neither BACKUP_CALLBACK_SECRET nor NEXTAUTH_SECRET is configured',
-      );
-      return NextResponse.json({ error: 'Callback not configured' }, { status: 500 });
-    }
-
-    if (!secretMatches(req.headers.get('x-backup-secret'), expected)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await req.json().catch(() => ({}));
-    const {
-      jobId,
-      repoFullName,
-      success,
-      merkleRoot,
-      ipfsCid,
-      ckbTxHash,
-      ckbCellOutpoint,
-      githubNumericId,
-      commitsProcessed,
-      encryptionKey,
-      encryptionIv,
-      error,
-    }: {
-      jobId?: string;
-      repoFullName?: string;
-      success?: boolean;
-      merkleRoot?: string;
-      ipfsCid?: string;
-      ckbTxHash?: string;
-      ckbCellOutpoint?: string;
-      githubNumericId?: string;
-      commitsProcessed?: number;
-      encryptionKey?: string;
-      encryptionIv?: string;
-      error?: string;
-    } = body ?? {};
-
-    if (!repoFullName || !REPO_PATTERN.test(repoFullName)) {
-      return NextResponse.json({ error: 'Invalid repoFullName' }, { status: 400 });
-    }
-
-    // Worker-side failure: record it and acknowledge so Actions stops retrying.
-    if (!success) {
-      console.error(`[backup/callback] Job ${jobId} failed for ${repoFullName}: ${error}`);
+    const body = await req.json();
+    if (typeof body.jobId !== 'string' || !isValidRepoFullName(body.repoFullName)) return NextResponse.json({ error: 'Missing job reference' }, { status: 409 });
+    if (body.success === false) {
+      // Prepared bytes may already be on-chain; retain that job's reservation.
+      await prisma.workerDispatch.updateMany({ where: { id: body.jobId, repository: body.repoFullName.toLowerCase(), state: 'queued' }, data: { state: 'failed' } });
       return NextResponse.json({ acknowledged: true, success: false });
     }
-
-    if (!ipfsCid || !ckbTxHash) {
-      return NextResponse.json(
-        { error: 'Missing ipfsCid or ckbTxHash' },
-        { status: 400 },
-      );
+    if (body.success !== true || !/^0x[a-f0-9]{64}$/i.test(body.ckbTxHash || '')) return NextResponse.json({ error: 'Invalid completion reference' }, { status: 400 });
+    const completed = await completeBackupJob(body.jobId, body.repoFullName, body.ckbTxHash);
+    if (completed.job.dirty) {
+      const user = await prisma.user.findUnique({ where: { id: completed.job.userId } });
+      if (user?.autoSync) {
+        const followUp = await dispatchBackup(body.repoFullName, user.id, completed.result.ckbCellOutpoint, { deliveryId: `followup:${body.jobId}` });
+        if (!followUp.ok) return NextResponse.json({ error: 'Backup saved; follow-up dispatch needs a callback retry.' }, { status: 503 });
+      }
     }
-    if (githubNumericId !== undefined && (typeof githubNumericId !== 'string' || !/^[1-9][0-9]{0,29}$/.test(githubNumericId))) {
-      return NextResponse.json({ error: 'Invalid immutable GitHub repository ID' }, { status: 400 });
-    }
-
-    const existingRepo = await db.findRepo(repoFullName);
-
-    if (!existingRepo) {
-      console.error(`[backup/callback] No registered backup owner for ${repoFullName}`);
-      return NextResponse.json({ error: 'Repository was not registered before backup. Start a new backup from your account.' }, { status: 409 });
-    }
-
-    await db.updateRepo(repoFullName, {
-      isBackedUp: true,
-      lastBackupCid: ipfsCid,
-      ckbTxHash,
-      ...(githubNumericId ? { githubNumericId } : {}),
-      ...(ckbCellOutpoint ? { ckbCellOutpoint } : {}),
-      ...(encryptionKey ? { encryptionKey } : {}),
-      ...(encryptionIv ? { encryptionIv } : {}),
-      ...(typeof commitsProcessed === 'number' ? { commitCount: commitsProcessed } : {}),
-    });
-    console.log(`[backup/callback] Updated ${repoFullName} -> ${ckbTxHash}`);
-
-    return NextResponse.json({
-      acknowledged: true,
-      success: true,
-      merkleRoot: merkleRoot ?? null,
-    });
-  } catch (e: any) {
-    console.error('[backup/callback] Error:', e);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ acknowledged: true, success: true, replayed: completed.replayed });
+  } catch {
+    return NextResponse.json({ error: 'Backup completion could not be reconciled. Retry the same job.' }, { status: 409 });
   }
 }
