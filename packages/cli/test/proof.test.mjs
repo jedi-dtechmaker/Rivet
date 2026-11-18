@@ -43,7 +43,7 @@ test('verification rejects pending, mismatched and missing on-chain roots', asyn
   const proof = proofFor(['1'.repeat(40)]);
   const request = (status, root) => async (_url, options) => {
     const method = JSON.parse(options.body).method;
-    return { ok: true, json: async () => ({ result: method === 'get_header' ? { number: '0x2a' } : {
+    return { ok: true, json: async () => ({ result: method === 'get_header' ? { number: '0x2a', hash: txHash } : {
       tx_status: { status, block_hash: txHash }, transaction: { hash: txHash, outputs_data: [root] },
     } }) };
   };

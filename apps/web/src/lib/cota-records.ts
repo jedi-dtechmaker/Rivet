@@ -4,6 +4,7 @@ import { prisma, readWithConnectionRetry } from '@/lib/db';
 import { COTA_TESTNET, cotaTypeForLock } from '@/lib/cota';
 import { buildSmt, commitmentKey, EMPTY_ROOT } from '@/lib/cota-smt';
 import { createTestnetClient } from '@/lib/ckb-server';
+import { checkBackupAnchor } from './backup-anchor';
 import { createWitnessProofTransaction, LEGACY_BLOCKED, LEGACY_PROTOCOL, RecordEntry, UnsupportedCotaRecordError, WITNESS_PROTOCOL } from '@/lib/identity-proof';
 
 const MAX_FEE = ccc.fixedPointFrom('0.01');
@@ -92,8 +93,7 @@ export async function prepareRecords(githubId: string, client = createTestnetCli
       if (txHash !== repo.ckbTxHash || !Number.isSafeInteger(index) || index < 0) throw new Error('A saved backup outpoint is invalid.');
       const anchor = await client.getTransaction(txHash);
       if (anchor?.status !== 'committed') throw new Error('A backup anchor is not confirmed yet. Retry after confirmation.');
-      const merkleRoot = anchor.transaction.outputsData[index];
-      if (!/^0x[0-9a-f]{64}$/i.test(merkleRoot || '')) throw new Error('A backup anchor has an unsupported proof format.');
+      const { merkleRoot } = checkBackupAnchor(anchor.transaction.outputsData[index], { ipfsCid: repo.lastBackupCid, commitCount: repo.commitCount });
       const key = commitmentKey(`backup:${repo.fullName.toLowerCase()}`);
       records.set(key, { key, record: {
         kind: 'backup', version: 1, network: 'ckb-testnet', repository: repo.fullName,

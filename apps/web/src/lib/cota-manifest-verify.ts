@@ -3,6 +3,7 @@ import { TESTNET_SCRIPTS } from '@ckb-ccc/core/advanced';
 import { cotaTypeForLock } from './cota';
 import { ManifestBinding, ManifestEnvelope, parseManifestEnvelope, verifyManifestUpdate } from './cota-manifest';
 import { cotaRoot, verifyManifestClaim, verifyManifestMint } from './cota-manifest-chain';
+import { checkBackupAnchor } from './backup-anchor';
 
 export const MANIFEST_PROOF_PROTOCOL = 'rivet-cota-manifest-proof-v1';
 const MAX_TRANSACTIONS = 512;
@@ -207,7 +208,7 @@ export async function verifyManifestProofPackage(value: unknown, options: Verify
       const anchorIndex = Number(anchorOutpoint.slice(separator + 1));
       const anchor = await committed(anchorHash);
       const merkleRoot = hex(record.merkleRoot, 32, 'backup Merkle root');
-      if (hex(output(anchor, anchorHash, anchorIndex).outputData, 32, 'backup anchor data') !== merkleRoot) throw new Error('A public backup proof differs from its committed CKB anchor.');
+      checkBackupAnchor(output(anchor, anchorHash, anchorIndex).outputData, { merkleRoot, ipfsCid: String(record.ipfsCid), commitCount: Number(record.commitCount) });
       if (anchors.has(anchorOutpoint) && anchors.get(anchorOutpoint) !== merkleRoot) throw new Error('Manifest backup anchors disagree.');
       anchors.set(anchorOutpoint, merkleRoot);
     }

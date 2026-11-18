@@ -2,8 +2,26 @@
   "name": "@rivet/cli",
   "version": "0.1.0",
   "private": true,
+  "description": "Installable Rivet CLI for public GitHub backups, proof verification and exact recovery on CKB Testnet",
+  "license": "MIT",
   "type": "module",
-  "bin": { "rivet": "src/cli.mjs" },
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "engines": { "node": ">=24" }
+  "bin": {
+    "rivet": "src/cli.mjs"
+  },
+  "files": [
+    "src/",
+    "runtime/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@ckb-ccc/core": "1.21.0",
+    "esbuild": "0.27.0"
+  }
 }

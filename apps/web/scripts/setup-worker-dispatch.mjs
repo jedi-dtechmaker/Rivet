@@ -17,7 +17,7 @@ async function main() {
       await transaction.$executeRawUnsafe(`SET LOCAL search_path TO "${schema.replaceAll('"', '""')}"`);
       await transaction.$queryRawUnsafe('SELECT 1 FROM pg_advisory_xact_lock(7824102)');
       for (const statement of sql.split(';').filter(value => value.trim())) await transaction.$executeRawUnsafe(statement);
-      await transaction.$queryRawUnsafe('SELECT "id", "userId", "kind", "createdAt" FROM "WorkerDispatch" LIMIT 0');
+      await transaction.$queryRawUnsafe('SELECT "id", "userId", "kind", "repository", "previousOutpoint", "state", "checkpoint", "dirty", "createdAt" FROM "WorkerDispatch" LIMIT 0');
     }, { maxWait: 15000, timeout: 45000 });
     console.log('Worker dispatch limits are ready. Existing backups and identities are preserved.');
   } finally { await client.$disconnect(); }

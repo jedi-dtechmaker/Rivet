@@ -14,6 +14,7 @@ import { createManifestStateStore } from './cota-manifest-state';
 import { manifestFeatureEnabled, manifestIssuer, transactionJson } from './cota-manifest-config';
 import { refreshManifestOperation, submitManifestOperation } from './cota-manifest-publication';
 import { reconcileManifestBackups } from './cota-manifest-backups';
+import { checkBackupAnchor } from './backup-anchor';
 
 const store = createManifestStateStore(prisma);
 const pendingStatuses = ['building', 'awaiting_signature', 'validating', 'signed_ready', 'broadcasting', 'submitted', 'unknown', 'blocked'];
@@ -68,8 +69,10 @@ async function currentManifest(user: User, binding: ManifestBinding, client: ccc
       if (!Number.isSafeInteger(index) || index > 0xffffffff) throw new Error('A saved backup anchor outpoint is invalid.');
       const anchor = await client.getTransaction(repo.ckbTxHash);
       if (anchor?.status !== 'committed') throw new Error('A public backup anchor is awaiting confirmation.');
+      if (anchor.transaction.hash() !== repo.ckbTxHash || !anchor.transaction.outputs[index]) throw new Error('A saved backup anchor is invalid.');
       return { repositoryId: repo.githubNumericId, repository: repo.fullName, ipfsCid: repo.lastBackupCid,
-        merkleRoot: chainHex(anchor.transaction.outputsData[index], 32), anchorOutpoint: repo.ckbCellOutpoint, commitCount: repo.commitCount };
+        merkleRoot: checkBackupAnchor(anchor.transaction.outputsData[index], { ipfsCid: repo.lastBackupCid, commitCount: repo.commitCount }).merkleRoot,
+        anchorOutpoint: repo.ckbCellOutpoint, commitCount: repo.commitCount };
     })));
   }
   return { ...buildManifest({ ...binding, githubUsername: user.githubUsername || user.githubId, backups }), snapshot: snapshotOf(user, repositories) };

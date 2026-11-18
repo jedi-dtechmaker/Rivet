@@ -8,3 +8,15 @@ CREATE TABLE IF NOT EXISTS "WorkerDispatch" (
 );
 CREATE INDEX IF NOT EXISTS "WorkerDispatch_userId_createdAt_idx" ON "WorkerDispatch"("userId", "createdAt");
 CREATE INDEX IF NOT EXISTS "WorkerDispatch_createdAt_idx" ON "WorkerDispatch"("createdAt");
+ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "repository" TEXT;
+ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "previousOutpoint" TEXT;
+ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "state" TEXT NOT NULL DEFAULT 'queued';
+ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "checkpoint" JSONB;
+ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "dirty" BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS "WorkerDispatch_repository_state_idx" ON "WorkerDispatch"("repository", "state");
+CREATE TABLE IF NOT EXISTS "BackupDelivery" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "repository" TEXT NOT NULL,
+  "jobId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

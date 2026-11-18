@@ -55,25 +55,25 @@ export default function DocsPage() {
     </section>
     <section id="restore" className={styles.section}>
       <h2>Recover your repository</h2>
-      <p>Open one of your backed-up repositories and use its restore controls. Browser restore requires a signed-in account authorized to access that backup. For local recovery, the source CLI can export a private recovery file and restore a new bare Git mirror.</p>
-      <details className={styles.details}><summary>Local recovery with the source CLI</summary><div>
-        <p>Use Node.js 24+ and Git from a checkout of the <a href="https://github.com/jedi-dtechmaker/Rivet" target="_blank" rel="noreferrer">Rivet repository</a>. Set <code>RIVET_URL</code> to your Rivet host and <code>RIVET_TOKEN</code> to a GitHub token for your registered account.</p>
-        <pre><code>{`node packages/cli/src/cli.mjs status owner/repository --proof-out recovery.secret.json
-node packages/cli/src/cli.mjs restore owner/repository --mode exact --proof recovery.secret.json --target ./recovered.git
+      <p>Open one of your backed-up repositories and use its restore controls. Browser restore requires a signed-in account authorized to access that backup. The Rivet CLI can also restore a new bare Git mirror on your computer.</p>
+      <details className={styles.details}><summary>Local recovery with the Rivet CLI</summary><div>
+        <p>Use Node.js 24+ and Git, then install a supplied Rivet CLI archive as described in the <a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/packages/cli/README.md" target="_blank" rel="noreferrer">CLI guide</a>. Sign in once using a GitHub personal token for your registered Rivet account.</p>
+        <pre><code>{`rivet login
+rivet restore owner/repository --target ./recovered.git
 git clone ./recovered.git ./working-copy`}</code></pre>
-        <p>The recovery file includes private decryption material. Keep it outside version control. Once exported, local verification and restore use the proof, CKB RPC, and backup bundle without requiring the original GitHub repository.</p>
-        <p>The source CLI is in Milestone 2 development. Published binaries and attribution remapping are still planned. See the <a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/packages/cli/README.md" target="_blank" rel="noreferrer">CLI guide</a> for setup and current verification limits.</p>
+        <p>For independent recovery, export a private recovery file with <code>rivet status owner/repository --proof-out /private/location/recovery.secret.json</code>. Keep it outside version control. With <code>--proof</code>, verification and restore use that file, CKB RPC, and the backup bundle without requiring Rivet sign-in or the original GitHub repository.</p>
+        <p>Attribution restore uses <code>--mode attribution</code> with an email map and your signing key. It keeps an exact original copy and signs a complete commit mapping. The CLI guide explains independent mapping verification and its separate testnet anchor. Hosted rollout and live acceptance remain pending. Backups cover public history pushed to GitHub; local-only commits and working files are excluded.</p>
       </div></details>
     </section>
     <section id="verification" className={styles.section}>
       <h2>Understand what is verified</h2>
       <p><Link href="/verify">Look up a backup</Link> using its transaction hash, IPFS CID, or <code>owner/repository</code>. The lookup finds a public backup record and checks its referenced CKB anchor.</p>
-      <details className={styles.details}><summary>Backup records, identity proofs, and commit dates</summary><div><p>A backup anchor commits to a set of Git commits at a blockchain checkpoint. It does not certify the dates entered into those commits or guarantee that an IPFS gateway can currently serve the file.</p><p>A developer’s public profile separately checks a confirmed CoTA identity snapshot and current passport ownership. Use the exported manifest verifier for independent identity-proof checks.</p><p>Legacy backup anchors do not bind every piece of bundle metadata, including refs and file bytes. The CLI guide describes the checks it performs and the remaining limitations.</p></div></details>
+      <details className={styles.details}><summary>Backup records, identity proofs, and commit dates</summary><div><p>A backup anchor commits to a set of Git commits at a blockchain checkpoint. It does not certify the dates entered into those commits or guarantee that an IPFS gateway can currently serve the file.</p><p>A developer’s public profile separately checks a confirmed CoTA identity snapshot and current passport ownership. Use the exported manifest verifier for independent identity-proof checks.</p><p>V2 backup anchors also bind branch and tag refs, bundle file bytes, the IPFS CID, and commit count. Legacy anchors cover the commit set only; the CLI reports their remaining verification limits.</p></div></details>
     </section>
     <section id="developers" className={styles.section}>
       <h2>Build, integrate, or run your own instance</h2>
       <div className={styles.grid}>
-        <article className={styles.card}><h3>CLI and API</h3><p>The source CLI supports backup, status, verification, and exact local restore. Authenticated backup and status requests use your GitHub bearer token.</p><a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/packages/cli/README.md" target="_blank" rel="noreferrer">Read the CLI reference ↗</a></article>
+        <article className={styles.card}><h3>CLI and API</h3><p>The CLI supports saved sign-in, project detection, backup, status, pushed-history monitoring, verification, and exact or attribution restore. Install it once and run it from your own project directories.</p><a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/packages/cli/README.md" target="_blank" rel="noreferrer">Read the CLI reference ↗</a></article>
         <article className={styles.card}><h3>Self-hosting</h3><p>Configure GitHub authentication, PostgreSQL, storage, workers, and CKB testnet services. Apply the documented release setup before enabling identity features.</p><a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/docs/TESTNET_LAUNCH.md" target="_blank" rel="noreferrer">Open the deployment guide ↗</a></article>
         <article className={styles.card}><h3>Identity verification</h3><p>Inspect the manifest format, issuer setup, and standalone proof-verification procedure.</p><a href="https://github.com/jedi-dtechmaker/Rivet/blob/main/docs/COTA_MANIFEST_RUNBOOK.md" target="_blank" rel="noreferrer">Open the identity runbook ↗</a></article>
       </div>

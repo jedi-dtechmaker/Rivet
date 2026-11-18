@@ -8,7 +8,7 @@ let savedEnvironment;
 
 beforeEach(() => {
   mock.method(prisma, '$transaction', async callback => callback({
-    $queryRaw: async () => [], workerDispatch: { count: async () => 0, create: async () => ({}) },
+    $queryRaw: async () => [], repository: { findFirst: async () => ({ userId: 'user-id', ckbCellOutpoint: null }) }, workerDispatch: { findFirst: async () => null, count: async () => 0, create: async () => ({}) },
   }));
   savedEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]]));
   Object.assign(process.env, {
@@ -65,4 +65,12 @@ test('permission failures identify worker access rather than an invalid user sig
   const result = await dispatchBackup('user/source', 'user-id');
   assert.equal(result.ok, false);
   assert.match(result.error, /GitHub denied Rivet permission/);
+});
+
+test('an uncertain GitHub server response retains the existing job reference for reconciliation', async () => {
+  process.env.GH_DISPATCH_TOKEN = 'operator-credential';
+  const fetch = mock.method(globalThis, 'fetch', async () => new Response(null, { status: 503 }));
+  const result = await dispatchBackup('user/source', 'user-id');
+  assert.equal(result.ok, true); assert.equal(result.dispatchUncertain, true); assert.ok(result.jobId);
+  assert.equal(fetch.mock.callCount(), 1);
 });

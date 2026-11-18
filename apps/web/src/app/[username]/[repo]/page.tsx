@@ -49,7 +49,7 @@ export default async function RepoHome({ params: pendingParams }: { params: Prom
                   <Database size={16} color="var(--color-brand-primary)" /> CKB Blockchain Anchor
                 </h3>
                 <p style={{ color: 'var(--color-text-dim)', fontSize: '14px', marginBottom: '12px' }}>
-                  This cryptographic proof demonstrates that this repository's exact state existed by a certain CKB block, verifying data integrity and timestamp.
+                  This proof shows that the anchored repository state existed by a CKB block height. It does not certify Git commit dates or authorship.
                 </p>
                 <div style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '12px', fontFamily: 'monospace', fontSize: '13px', wordBreak: 'break-all' }}>
                   {repo.ckbTxHash}

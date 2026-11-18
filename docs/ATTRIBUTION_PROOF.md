@@ -1,0 +1,11 @@
+# Attribution mapping proof v1
+
+Attribution restore starts from a verified v2 backup and keeps its exact original mirror. A separate mirror is rewritten with git-filter-repo using an email-only mailmap, preserved commit-message hashes and encodings, no empty/degenerate-merge pruning, and no replacement refs. An old/new commit pair is required for every original reachable commit, including unchanged IDs; every rewritten reachable commit must appear in that mapping. Both refs and annotated tag object IDs are committed.
+
+`mapping.json` contains a `payload` and an Ed25519 `signature`. The signed bytes are UTF-8 canonical JSON: object keys sorted lexicographically, compact separators, arrays in their recorded order, ordinary JSON scalar encoding. The payload includes protocol `rivet-attribution-proof-v1`, network `ckb-testnet`, the original public v2 proof, ordered email mappings, git-filter-repo version, sorted commit pairs, rewritten refs/hash/count, the DER SPKI owner public key encoded in base64, its SHA-256 fingerprint, and signature-effects text. Encryption keys and IVs are excluded.
+
+The signature covers the canonical payload. The mapping digest is SHA-256 of the canonical complete document, including its signature. The separate mapping cell data is 36 bytes: `0x52564d01` (RVM + version 1) followed by that 32-byte digest. The source backup transaction/output is therefore bound through the signed document. The mapping cell is an independent output; it does not replace the backup anchor.
+
+An independent verifier requires the owner's public key through an established identity channel, the original recovery proof/bundle, and the rewritten repository. It checks the owner signature, original chain anchor and bundle, reproduces the rewrite, compares every mapping and rewritten ref, runs Git integrity checks, and optionally verifies the mapping digest in a committed CKB transaction and its block header. A self-supplied embedded key does not establish GitHub or wallet identity. Rewritten Git signatures cannot be treated as original author signatures; the exact original mirror retains those objects.
+
+See the [CLI guide](../packages/cli/README.md#attribution-restore) for commands. Local and fixture verification do not constitute live testnet acceptance.

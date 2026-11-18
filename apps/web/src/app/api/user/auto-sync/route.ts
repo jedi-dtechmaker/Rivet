@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { walletRequestOrigin } from '@/lib/wallet-request';
+import { configureRepositoryHook } from '@/lib/github-hooks';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,55 +34,13 @@ export async function POST(req: NextRequest) {
       const repos = await db.findReposByUserId(dbUser.id);
       const backedUpRepos = repos.filter(r => r.isBackedUp && (!autoSync || !r.isPrivate));
       
-      const webhookUrl = `${appUrl}/api/webhook/github`;
-
-      if (!appUrl || appUrl.includes('localhost')) {
-        console.warn('Cannot configure webhooks automatically without a public NEXT_PUBLIC_APP_URL (e.g., Ngrok).');
-      } else {
-        const githubHeaders = {
-          'Authorization': `Bearer ${session.accessToken}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        };
-
-        const results = await Promise.all(backedUpRepos.map(async (repo) => {
-          try {
-            // First, find if we already have a webhook installed
-            const hooksRes = await fetch(`https://api.github.com/repos/${repo.fullName}/hooks`, { headers: githubHeaders });
-            if (!hooksRes.ok) return false;
-            const hooks = await hooksRes.json();
-            const existingHook = hooks.find((h: any) => h.config.url === webhookUrl);
-
-            if (autoSync && !existingHook) {
-              // Create Webhook
-              const result = await fetch(`https://api.github.com/repos/${repo.fullName}/hooks`, {
-                method: 'POST',
-                headers: githubHeaders,
-                body: JSON.stringify({
-                  name: 'web',
-                  active: true,
-                  events: ['push'],
-                  config: { url: webhookUrl, content_type: 'json', secret: webhookSecret }
-                })
-              });
-              if (!result.ok) return false;
-              console.log(`[Auto-Sync] Installed webhook on ${repo.fullName}`);
-            } else if (!autoSync && existingHook) {
-              // Delete Webhook
-              const result = await fetch(`https://api.github.com/repos/${repo.fullName}/hooks/${existingHook.id}`, {
-                method: 'DELETE',
-                headers: githubHeaders
-              });
-              if (!result.ok) return false;
-              console.log(`[Auto-Sync] Removed webhook from ${repo.fullName}`);
-            }
-            return true;
-          } catch (e) {
-            console.error(`[Auto-Sync] Error managing webhook for ${repo.fullName}:`, e);
-            return false;
-          }
-        }));
-        if (results.some(result => !result)) return NextResponse.json({ error: 'GitHub could not update every webhook. Check repository admin access and sign in again to grant webhook permission.' }, { status: 502 });
+      if (appUrl && !appUrl.includes('localhost')) {
+        // Bound parallel GitHub requests; reads retry, hook mutations reconcile through the next list operation.
+        for (let offset = 0; offset < backedUpRepos.length; offset += 4) {
+          const results = await Promise.allSettled(backedUpRepos.slice(offset, offset + 4).map(repo =>
+            configureRepositoryHook(repo.fullName, session.accessToken!, autoSync)));
+          if (results.some(result => result.status === 'rejected')) return NextResponse.json({ error: 'GitHub could not update every webhook. Check repository admin access and sign in again to grant webhook permission.' }, { status: 502 });
+        }
       }
     }
 

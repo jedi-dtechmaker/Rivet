@@ -1,6 +1,7 @@
 import { ccc } from '@ckb-ccc/core';
 import { PrismaClient, Repository, User } from '@prisma/client';
 import { readPublicRepository } from './public-repository';
+import { checkBackupAnchor } from './backup-anchor';
 
 export class ManifestBackupMetadataError extends Error {
   readonly code = 'MANIFEST_BACKUP_METADATA';
@@ -34,17 +35,22 @@ export async function reconcileManifestBackups(
       let anchorOutpoint = repo.ckbCellOutpoint;
       if (!anchorOutpoint) {
         // Historical workers saved the transaction hash but not its output
-        // index. Recover only an unambiguous, untyped 32-byte anchor output.
-        const indexes = transaction.outputsData.flatMap((data, index) =>
-          /^0x[0-9a-f]{64}$/i.test(data) && !transaction.outputs[index]?.type ? [index] : []);
+        // index. Recover only an unambiguous, untyped supported anchor output.
+        const indexes = transaction.outputsData.flatMap((data, index) => {
+          if (!transaction.outputs[index] || transaction.outputs[index].type) return [];
+          try { checkBackupAnchor(data, { ipfsCid: repo.lastBackupCid!, commitCount: repo.commitCount }); return [index]; }
+          catch { return []; }
+        });
         if (indexes.length !== 1) fail('its original transaction does not identify one unambiguous backup anchor.');
         anchorOutpoint = `${repo.ckbTxHash}:${indexes[0]}`;
       }
       const match = /^(0x[0-9a-f]{64}):(0|[1-9][0-9]*)$/i.exec(anchorOutpoint!);
       if (!match || match[1] !== repo.ckbTxHash || !Number.isSafeInteger(Number(match[2]))
-        || !transaction.outputs[Number(match[2])] || !/^0x[0-9a-f]{64}$/i.test(transaction.outputsData[Number(match[2])] || '')) {
+        || !transaction.outputs[Number(match[2])]) {
         fail('its saved anchor output is invalid.');
       }
+      try { checkBackupAnchor(transaction.outputsData[Number(match![2])], { ipfsCid: repo.lastBackupCid!, commitCount: repo.commitCount }); }
+      catch { fail('its saved anchor output is invalid.'); }
       let numericId = repo.githubNumericId;
       if (!numericId) {
         const current = await readRepository(repo.fullName, options.token);

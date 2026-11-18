@@ -26,7 +26,7 @@ beforeEach(() => {
   mock.method(db, 'findUserByGithubId', async () => ({ id: 'requester' }));
   mock.method(console, 'error', () => {});
   mock.method(console, 'log', () => {});
-  mock.method(prisma, '$transaction', async callback => callback({ $queryRaw: async () => [], workerDispatch: { count: async () => 0, create: async () => ({}) } }));
+  mock.method(prisma, '$transaction', async callback => callback({ $queryRaw: async () => [], repository: { findFirst: async () => db.findRepo('owner/public') }, workerDispatch: { findFirst: async () => null, count: async () => 0, create: async () => ({}) } }));
 });
 
 afterEach(() => {

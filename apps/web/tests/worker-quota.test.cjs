@@ -19,7 +19,9 @@ function database(counts) {
   const created = [];
   mock.method(prisma, '$transaction', async callback => callback({
     $queryRaw: async () => { locked = true; },
+    repository: { findFirst: async () => ({ userId: 'account', ckbCellOutpoint: null }) },
     workerDispatch: {
+      findFirst: async () => null,
       count: async ({ where }) => { assert.ok(locked); assert.ok(where.createdAt.gte instanceof Date); return counts.shift(); },
       create: async ({ data }) => { assert.ok(locked); created.push(data); },
     },

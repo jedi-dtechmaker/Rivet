@@ -9,6 +9,7 @@ coverage
 .next/
 out/
 build
+/dist/
 
 # misc
 .DS_Store
@@ -38,3 +39,4 @@ apps/web/scripts/*.js
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+packages/cli/runtime/
