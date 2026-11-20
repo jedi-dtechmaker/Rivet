@@ -1,6 +1,6 @@
 # Milestone 2 — CLI Restore Tooling and Hardening
 
-> Worker privacy update — November 20, 2026: public backup/restore workflows are paused. New hosted jobs must use a separate private worker repository. The privacy/progress fix is prepared on `fix/private-workers-and-progress`; follow [WORKER_SETUP.md](WORKER_SETUP.md) before resuming dispatch. Published CLI installation, saved proofs and local recovery remain available.
+> Worker hosting update — November 20, 2026: the owner chose to continue with the existing GitHub Actions workers temporarily. Backup and restore workflows were re-enabled. Their run history remains public until workers move to a VPS or managed worker host. The progress fix is on `fix/private-workers-and-progress`; no private worker repository is required. See [WORKER_SETUP.md](WORKER_SETUP.md).
 
 Started November 10, 2026, following completion of Milestone 1 project acceptance. The funded scope is the second milestone of Phase One; its acceptance remains a published CLI for Linux, macOS and Windows and a verifiable restore demonstration on CKB Testnet. The broader product roadmap in `PHASES.md` includes work outside this grant milestone.
 

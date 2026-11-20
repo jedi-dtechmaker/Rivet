@@ -3,8 +3,18 @@ import { reserveWorkerDispatch } from '@/lib/worker-quota';
 import { prisma } from '@/lib/db';
 
 /**
- * Git work runs in a separately configured private worker repository.
- * Never infer the worker from the public source repository or a Vercel checkout.
+ * Dispatches jobs to the Rivet GitHub Actions workers.
+ *
+ * Vercel serverless functions have no `git` binary, a read-only filesystem and a
+ * 10-60s timeout, so all git work (backup and restore) runs in the
+ * "Repo Backup Worker" / "Repo Restore Worker" workflows.
+ *
+ * Configuration is optional-first: on Vercel the repository coordinates and
+ * deployment URL come from the platform, so the only genuinely required value is
+ * a token able to dispatch the workflow.
+ *
+ * Both RIVET_* and PROOF_* variable names are accepted (RIVET_* wins) so older
+ * deployments keep working after the rename.
  */
 
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -17,7 +27,7 @@ export function isValidRepoFullName(value: unknown): value is string {
   return typeof value === 'string' && REPO_PATTERN.test(value);
 }
 
-/** Workflow filename aliases are retained for existing deployments. */
+/** Read the first defined value among RIVET_*, PROOF_* and the Vercel default. */
 function env(...names: string[]): string | undefined {
   for (const name of names) {
     const value = process.env[name];
@@ -27,10 +37,15 @@ function env(...names: string[]): string | undefined {
 }
 
 function resolveWorkflowRepo(): { owner: string; name: string; ref: string } | null {
-  const owner = process.env.RIVET_WORKER_REPO_OWNER;
-  const name = process.env.RIVET_WORKER_REPO_NAME;
-  const ref = process.env.RIVET_WORKER_REPO_REF || 'main';
-  if (!owner || !name || !isValidRepoFullName(`${owner}/${name}`)) return null;
+  const owner = env(
+    'RIVET_REPO_OWNER',
+    'PROOF_REPO_OWNER',
+    'VERCEL_GIT_REPO_OWNER',
+  );
+  const name = env('RIVET_REPO_NAME', 'PROOF_REPO_NAME', 'VERCEL_GIT_REPO_SLUG');
+  const ref = env('RIVET_REPO_REF', 'PROOF_REPO_REF', 'VERCEL_GIT_COMMIT_REF') || 'main';
+
+  if (!owner || !name) return null;
   return { owner, name, ref };
 }
 
@@ -42,7 +57,7 @@ function resolveAppUrl(): string | null {
 }
 
 /**
- * Dispatch a workflow only after GitHub confirms the worker repository is private.
+ * Dispatch any workflow in the Rivet repository.
  * A jobId is generated and injected into the inputs automatically.
  */
 export async function dispatchWorkflow(opts: {
@@ -57,9 +72,10 @@ export async function dispatchWorkflow(opts: {
 
   if (!target) {
     console.error(
-      '[dispatch] Configure RIVET_WORKER_REPO_OWNER and RIVET_WORKER_REPO_NAME for a private repository.',
+      '[dispatch] Cannot resolve the Rivet repository. Set RIVET_REPO_OWNER and ' +
+        'RIVET_REPO_NAME if not running on Vercel.',
     );
-    return { ok: false, status: 503, error: 'Private backup and restore workers are not configured. Please contact support.' };
+    return { ok: false, status: 500, error: 'Workers are not configured on the server' };
   }
 
   if (!opts.token) {
@@ -71,23 +87,6 @@ export async function dispatchWorkflow(opts: {
 
   if (process.env.RIVET_WORKERS_ENABLED === 'false') return { ok: false, status: 503, error: 'Backup and restore workers are temporarily paused.' };
   if (!opts.userId) return { ok: false, status: 401, error: 'Sign in before starting a worker.' };
-  // Check on every dispatch, including coalesced requests. A visibility change or
-  // failed lookup must never send customer activity to a public repository.
-  try {
-    const response = await fetch(`https://api.github.com/repos/${target.owner}/${target.name}`, {
-      headers: { Authorization: `Bearer ${opts.token}`, Accept: 'application/vnd.github+json' },
-      signal: AbortSignal.timeout(15000), cache: 'no-store', redirect: 'error',
-    });
-    if (!response.ok) throw new Error('Worker repository lookup failed.');
-    const repository = await response.json();
-    if (repository.private !== true || repository.visibility !== 'private' ||
-        repository.full_name?.toLowerCase() !== `${target.owner}/${target.name}`.toLowerCase()) {
-      throw new Error('Worker repository must be private.');
-    }
-  } catch {
-    console.error('[dispatch] Cannot confirm private worker repository access');
-    return { ok: false, status: 503, error: 'Backups and restores are temporarily paused while private workers are configured.' };
-  }
   try {
     const quota = await reserveWorkerDispatch(opts.userId, jobId, opts.kind, opts.backup);
     if (!quota.allowed) return { ok: false, status: 429, error: quota.error };

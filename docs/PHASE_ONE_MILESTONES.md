@@ -1,6 +1,6 @@
 # Rivet Phase One: Proposal Milestone Checklist
 
-> Worker privacy update — November 20, 2026: public backup/restore workflows are paused. New hosted jobs must use a separate private worker repository. The privacy/progress fix is prepared on `fix/private-workers-and-progress`; follow [WORKER_SETUP.md](WORKER_SETUP.md) before resuming dispatch. Published CLI installation, saved proofs and local recovery remain available.
+> Worker hosting update — November 20, 2026: the owner chose to continue with the existing GitHub Actions workers temporarily. Backup and restore workflows were re-enabled. Their run history remains public until workers move to a VPS or managed worker host. The progress fix is on `fix/private-workers-and-progress`; no private worker repository is required. See [WORKER_SETUP.md](WORKER_SETUP.md).
 
 Source: [Funded proposal and discussion](https://talk.nervos.org/t/dis-rivet-decentralized-github-backup-timestamping-and-restore-on-ckb/10739).
 

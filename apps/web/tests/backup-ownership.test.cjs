@@ -10,14 +10,14 @@ const { backupFixture } = require('./fixtures/backup-job.cjs');
 const { CkbHttpTransport } = require('../src/lib/ckb-server.ts');
 const statusRoute = require('../src/app/api/backup/status/route.ts');
 
-const environmentNames = ['RIVET_WORKER_REPO_OWNER', 'RIVET_WORKER_REPO_NAME', 'NEXT_PUBLIC_APP_URL', 'NEXTAUTH_URL', 'GH_DISPATCH_TOKEN', 'BACKUP_CALLBACK_SECRET'];
+const environmentNames = ['RIVET_REPO_OWNER', 'RIVET_REPO_NAME', 'NEXT_PUBLIC_APP_URL', 'NEXTAUTH_URL', 'GH_DISPATCH_TOKEN', 'BACKUP_CALLBACK_SECRET'];
 let savedEnvironment;
 const modelRestorations = [];
 
 beforeEach(() => {
   savedEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]]));
   Object.assign(process.env, {
-    RIVET_WORKER_REPO_OWNER: 'operator', RIVET_WORKER_REPO_NAME: 'workers',
+    RIVET_REPO_OWNER: 'operator', RIVET_REPO_NAME: 'workers',
     NEXT_PUBLIC_APP_URL: 'https://rivet.example', GH_DISPATCH_TOKEN: 'operator-token',
     NEXTAUTH_URL: 'https://rivet.example',
     BACKUP_CALLBACK_SECRET: 'test-callback-secret',
@@ -84,7 +84,6 @@ test('backup completion remains attached to the requesting account when the dash
     },
   } }));
   mock.method(globalThis, 'fetch', async url => {
-    if (url === 'https://api.github.com/repos/operator/workers') return Response.json({ private: true, visibility: 'private', full_name: 'operator/workers' });
     if (url === 'https://api.github.com/repos/requester/testing') return Response.json({ private: false, full_name: 'requester/testing', permissions: { push: true } });
     assert.equal(saved.userId, 'requester-db-id');
     return new Response(null, { status: 204 });

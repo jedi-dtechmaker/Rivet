@@ -42,16 +42,11 @@ concurrency:
 
 jobs:
   restore:
-    if: ${{ github.event.repository.private == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout Rivet
         uses: actions/checkout@v4
-        with:
-          repository: ${{ vars.RIVET_SOURCE_REPO || github.repository }}
-          ref: ${{ vars.RIVET_SOURCE_REF || github.sha }}
-          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4

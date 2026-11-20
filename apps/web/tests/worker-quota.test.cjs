@@ -3,7 +3,7 @@ const { afterEach, mock, test } = require('node:test');
 const { prisma } = require('../src/lib/db.ts');
 const { reserveWorkerDispatch } = require('../src/lib/worker-quota.ts');
 const { dispatchBackup } = require('../src/lib/backupDispatch.ts');
-const names = ['RIVET_WORKER_USER_HOURLY_LIMIT', 'RIVET_WORKER_GLOBAL_HOURLY_LIMIT', 'RIVET_WORKER_GLOBAL_DAILY_LIMIT', 'RIVET_WORKERS_ENABLED', 'RIVET_WORKER_REPO_OWNER', 'RIVET_WORKER_REPO_NAME', 'GH_DISPATCH_TOKEN', 'NEXT_PUBLIC_APP_URL'];
+const names = ['RIVET_WORKER_USER_HOURLY_LIMIT', 'RIVET_WORKER_GLOBAL_HOURLY_LIMIT', 'RIVET_WORKER_GLOBAL_DAILY_LIMIT', 'RIVET_WORKERS_ENABLED', 'RIVET_REPO_OWNER', 'RIVET_REPO_NAME', 'GH_DISPATCH_TOKEN', 'NEXT_PUBLIC_APP_URL'];
 const initial = Object.fromEntries(names.map(name => [name, process.env[name]]));
 
 afterEach(() => {
@@ -52,12 +52,8 @@ test('invalid worker limits fail closed before a transaction starts', async () =
 });
 
 test('budget exhaustion, unavailable storage, and the pause switch never dispatch a workflow', async () => {
-  Object.assign(process.env, { RIVET_WORKER_REPO_OWNER: 'operator', RIVET_WORKER_REPO_NAME: 'workers', GH_DISPATCH_TOKEN: 'operator-token', NEXT_PUBLIC_APP_URL: 'https://rivet.example' });
-  const fetch = mock.method(globalThis, 'fetch', async (url, options) => {
-    assert.equal(url, 'https://api.github.com/repos/operator/workers');
-    assert.notEqual(options.method, 'POST');
-    return Response.json({ private: true, visibility: 'private', full_name: 'operator/workers' });
-  });
+  Object.assign(process.env, { RIVET_REPO_OWNER: 'operator', RIVET_REPO_NAME: 'workers', GH_DISPATCH_TOKEN: 'operator-token', NEXT_PUBLIC_APP_URL: 'https://rivet.example' });
+  const fetch = mock.method(globalThis, 'fetch', async () => { throw new Error('Must not dispatch'); });
   mock.method(console, 'error', () => {});
   database([10]);
   assert.equal((await dispatchBackup('owner/repo', 'account')).status, 429);
@@ -65,5 +61,5 @@ test('budget exhaustion, unavailable storage, and the pause switch never dispatc
   assert.equal((await dispatchBackup('owner/repo', 'account')).status, 503);
   process.env.RIVET_WORKERS_ENABLED = 'false';
   assert.equal((await dispatchBackup('owner/repo', 'account')).status, 503);
-  assert.equal(fetch.mock.callCount(), 2);
+  assert.equal(fetch.mock.callCount(), 0);
 });

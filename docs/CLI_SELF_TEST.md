@@ -1,6 +1,6 @@
 # Test the Rivet CLI yourself
 
-> Worker privacy update — November 20, 2026: public backup/restore workflows are paused. New hosted jobs must use a separate private worker repository. The privacy/progress fix is prepared on `fix/private-workers-and-progress`; follow [WORKER_SETUP.md](WORKER_SETUP.md) before resuming dispatch. Published CLI installation, saved proofs and local recovery remain available.
+> Worker hosting update — November 20, 2026: the owner chose to continue with the existing GitHub Actions workers temporarily. Backup and restore workflows were re-enabled. Their run history remains public until workers move to a VPS or managed worker host. The progress fix is on `fix/private-workers-and-progress`; no private worker repository is required. See [WORKER_SETUP.md](WORKER_SETUP.md).
 
 The current package is a CLI. A separately importable Rivet SDK has not been implemented or published. Internal modules under `packages/cli/src` are implementation details, without a supported SDK API.
 

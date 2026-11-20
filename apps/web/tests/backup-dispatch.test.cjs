@@ -3,7 +3,7 @@ const { afterEach, beforeEach, mock, test } = require('node:test');
 const { dispatchBackup, dispatchRestore } = require('../src/lib/backupDispatch.ts');
 const { prisma } = require('../src/lib/db.ts');
 
-const environmentNames = ['RIVET_WORKER_REPO_OWNER', 'RIVET_WORKER_REPO_NAME', 'RIVET_WORKER_REPO_REF', 'NEXT_PUBLIC_APP_URL', 'GH_DISPATCH_TOKEN'];
+const environmentNames = ['RIVET_REPO_OWNER', 'RIVET_REPO_NAME', 'RIVET_REPO_REF', 'NEXT_PUBLIC_APP_URL', 'GH_DISPATCH_TOKEN'];
 let savedEnvironment, savedUpdateMany;
 
 beforeEach(() => {
@@ -12,9 +12,9 @@ beforeEach(() => {
   }));
   savedEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]]));
   Object.assign(process.env, {
-    RIVET_WORKER_REPO_OWNER: 'rivet-operator',
-    RIVET_WORKER_REPO_NAME: 'workers',
-    RIVET_WORKER_REPO_REF: 'main',
+    RIVET_REPO_OWNER: 'rivet-operator',
+    RIVET_REPO_NAME: 'workers',
+    RIVET_REPO_REF: 'main',
     NEXT_PUBLIC_APP_URL: 'https://rivet.example',
   });
   delete process.env.GH_DISPATCH_TOKEN;
@@ -49,7 +49,6 @@ test('missing worker credentials never fall back to a user token for backup or r
 test('workers use the operator token and only restore receives the user credential', async () => {
   process.env.GH_DISPATCH_TOKEN = 'operator-credential';
   const fetch = mock.method(globalThis, 'fetch', async (url, options) => {
-    if (url === 'https://api.github.com/repos/rivet-operator/workers') return Response.json({ private: true, visibility: 'private', full_name: 'rivet-operator/workers' });
     assert.match(url, /^https:\/\/api.github.com\/repos\/rivet-operator\/workers\/actions\/workflows\//);
     assert.equal(options.headers.Authorization, 'Bearer operator-credential');
     const body = JSON.parse(options.body);
@@ -58,14 +57,16 @@ test('workers use the operator token and only restore receives the user credenti
     assert.ok(body.inputs.jobId);
     return new Response(null, { status: 204 });
   });
-  assert.equal((await dispatchBackup('user/source', 'user-id')).ok, true);
-  assert.equal((await restore()).ok, true);
-  assert.equal(fetch.mock.callCount(), 4);
+  for (const result of [await dispatchBackup('user/source', 'user-id'), await restore()]) {
+    assert.equal(result.ok, true);
+    assert.equal('runUrl' in result, false);
+  }
+  assert.equal(fetch.mock.callCount(), 2);
 });
 
 test('permission failures identify worker access rather than an invalid user sign-in', async () => {
   process.env.GH_DISPATCH_TOKEN = 'operator-credential';
-  mock.method(globalThis, 'fetch', async url => url === 'https://api.github.com/repos/rivet-operator/workers' ? Response.json({ private: true, visibility: 'private', full_name: 'rivet-operator/workers' }) : new Response(JSON.stringify({ message: 'Must have admin rights to Repository.' }), { status: 403 }));
+  mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ message: 'Must have admin rights to Repository.' }), { status: 403 }));
   const result = await dispatchBackup('user/source', 'user-id');
   assert.equal(result.ok, false);
   assert.match(result.error, /GitHub denied Rivet permission/);
@@ -73,40 +74,8 @@ test('permission failures identify worker access rather than an invalid user sig
 
 test('an uncertain GitHub server response retains the existing job reference for reconciliation', async () => {
   process.env.GH_DISPATCH_TOKEN = 'operator-credential';
-  const fetch = mock.method(globalThis, 'fetch', async url => url === 'https://api.github.com/repos/rivet-operator/workers' ? Response.json({ private: true, visibility: 'private', full_name: 'rivet-operator/workers' }) : new Response(null, { status: 503 }));
+  const fetch = mock.method(globalThis, 'fetch', async () => new Response(null, { status: 503 }));
   const result = await dispatchBackup('user/source', 'user-id');
   assert.equal(result.ok, true); assert.equal(result.dispatchUncertain, true); assert.ok(result.jobId);
-  assert.equal(fetch.mock.callCount(), 2);
-});
-
-test('public, internal, mismatched and unverifiable worker repositories never reserve or dispatch customer jobs', async () => {
-  process.env.GH_DISPATCH_TOKEN = 'operator-credential';
-  const reserve = mock.method(prisma, '$transaction', async () => { throw new Error('Must not reserve'); });
-  for (const metadata of [
-    { private: false, visibility: 'public', full_name: 'rivet-operator/workers' },
-    { private: true, visibility: 'internal', full_name: 'rivet-operator/workers' },
-    { private: true, visibility: 'private', full_name: 'wrong/workers' }, {},
-  ]) {
-    const fetch = mock.method(globalThis, 'fetch', async (url, options) => {
-      assert.equal(url, 'https://api.github.com/repos/rivet-operator/workers');
-      assert.notEqual(options.method, 'POST');
-      return Response.json(metadata);
-    });
-    for (const result of [await dispatchBackup('user/source', 'user-id'), await restore()]) {
-      assert.equal(result.ok, false); assert.equal(result.status, 503);
-    }
-    assert.equal(fetch.mock.callCount(), 2); fetch.mock.restore();
-  }
-  mock.method(globalThis, 'fetch', async () => { throw new Error('Network unavailable'); });
-  assert.equal((await restore()).status, 503);
-  assert.equal(reserve.mock.callCount(), 0);
-});
-
-test('worker coordinates are explicit and never inherited from the public source checkout', async () => {
-  delete process.env.RIVET_WORKER_REPO_OWNER;
-  delete process.env.RIVET_WORKER_REPO_NAME;
-  process.env.GH_DISPATCH_TOKEN = 'operator-credential';
-  const fetch = mock.method(globalThis, 'fetch', async () => { throw new Error('Must not look up source checkout'); });
-  assert.equal((await restore()).status, 503);
-  assert.equal(fetch.mock.callCount(), 0);
+  assert.equal(fetch.mock.callCount(), 1);
 });

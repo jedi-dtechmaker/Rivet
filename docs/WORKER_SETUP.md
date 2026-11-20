@@ -1,63 +1,58 @@
-# Private worker setup
+# GitHub Actions worker setup
 
-Customer backups and restores must run in a **separate private repository**. The public `jedi-dtechmaker/Rivet` repository is for source, CI and releases. Customer progress is displayed inside Rivet; users do not receive worker URLs or need access to the worker repository.
+> Current decision — November 20, 2026: continue using the existing public GitHub Actions workers temporarily. Both backup and restore workflows were re-enabled at the owner’s request. A private worker repository is not required. Workflow history remains public while this hosting arrangement continues. The future worker host will be a VPS or a managed background worker service, rather than GitHub Actions.
 
-On November 20, 2026, both customer worker workflows in the public repository were disabled using GitHub's API. Release checks and CLI releases remain enabled. Existing public run history remains visible until an operator removes it. Keep those public workers disabled.
+GitHub sign-in authorizes access to the user's repositories. Backup and restore run in the shared Rivet repository configured by `RIVET_REPO_OWNER` and `RIVET_REPO_NAME`. Starting those workflows requires Rivet's own server credential, `GH_DISPATCH_TOKEN`. Ordinary users do not need permission to administer the Rivet repository or supply a personal token.
 
-The app requires explicit private worker coordinates and verifies `private: true`, `visibility: private` and the expected repository name with GitHub on every dispatch. Missing credentials, a failed lookup or public/internal visibility stops dispatch **before** reserving a job or sending customer inputs. The workflows also skip their jobs in public repositories. The old `RIVET_REPO_*`, `PROOF_REPO_*` and `VERCEL_GIT_REPO_*` coordinates are no longer worker fallbacks.
+## Configure the dispatch token
 
-## Create the private worker repository
-
-1. Create an empty **private** GitHub repository, for example `jedi-dtechmaker/rivet-workers`. Do not make it a fork of the public repository.
-2. Copy only `.github/workflows/backup.yml` and `.github/workflows/restore.yml` from this source checkout into the new repository, preserving those paths, and commit them to its default branch. Do not copy release workflows or application secrets into files.
-3. In the private repository's **Settings → Secrets and variables → Actions → Variables**, set:
-
-   ```dotenv
-   RIVET_SOURCE_REPO=jedi-dtechmaker/Rivet
-   RIVET_SOURCE_REF=<full commit SHA containing this privacy/progress fix>
-   ```
-
-   Use the commit deployed to Vercel. The workflows check out that public source revision with checkout credentials disabled. After future worker changes, update this pinned revision deliberately.
-4. Under **Actions secrets** in that private repository, configure `PINATA_JWT`, `TREASURY_PRIVATE_KEY` and `BACKUP_CALLBACK_SECRET`. Use the same callback secret in the app's server environment. Existing installations can temporarily use matching `NEXTAUTH_SECRET` values, but a dedicated callback secret avoids sharing the sign-in secret with workers.
-5. Confirm Actions is enabled in the private repository. Its maintainers can inspect runs; ordinary Rivet users and public source contributors do not need access.
-
-Private Actions usage may consume your account's included minutes and paid allowance. Review the account's usage settings before resuming workers. A private worker repository is the interim host until the VPS phase; neither host requires your personal computer to stay on.
-
-## Configure the dispatch token and Vercel
-
-1. Create a fine-grained GitHub token owned by an account with access to **rivet-workers**, selecting only that private repository. Grant **Actions: Read and write**; **Metadata: Read** is also required for the visibility check. Users' sign-in tokens never replace this operator credential.
-2. Configure these **server environment variables** on the existing Vercel project and in local development when needed:
+1. Sign in to GitHub as the owner of the worker repository. For this checkout, that repository is `jedi-dtechmaker/Rivet`.
+2. Open [GitHub's fine-grained token settings](https://github.com/settings/personal-access-tokens/new). Name the token `Rivet worker dispatch` and choose an expiration.
+3. Set **Resource owner** to the worker repository's owner. Under **Repository access**, choose **Only select repositories** and select **Rivet**.
+4. Under **Repository permissions**, grant **Actions: Read and write**. Leave other permissions at their defaults; Metadata read access is included automatically. [GitHub documents Actions write access for workflow dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event).
+5. Generate the token and save it directly in `apps/web/.env`:
 
    ```dotenv
-   GH_DISPATCH_TOKEN=<token with access to the private worker repo>
-   RIVET_WORKER_REPO_OWNER=jedi-dtechmaker
-   RIVET_WORKER_REPO_NAME=rivet-workers
-   RIVET_WORKER_REPO_REF=main
-   NEXT_PUBLIC_APP_URL=https://rivet-web-ten.vercel.app
-   BACKUP_CALLBACK_SECRET=<same secret as the private workers>
-   RIVET_WORKERS_ENABLED=false
+   GH_DISPATCH_TOKEN=your_generated_token
+   RIVET_REPO_OWNER=jedi-dtechmaker
+   RIVET_REPO_NAME=Rivet
+   RIVET_REPO_REF=main
    ```
 
-   Keep credentials out of chat, Git and `NEXT_PUBLIC_` variables. Adjust the branch and canonical app URL if your deployment differs. Do not point the new variables at the public Rivet repository.
-3. Apply `pnpm --filter @rivet/web run workers:setup` against the deployment database **before** deploying this version. This adds `WorkerDispatch.progress` with default zero and preserves existing records and signed checkpoints. Deploy the app from the same source revision configured in `RIVET_SOURCE_REF`.
-4. Set `RIVET_WORKERS_ENABLED=true` and redeploy only after the private workflows, credentials and callback URL are configured. Then perform one small public-repository backup from the app. Confirm the private worker receives the run, the public repository receives no customer run, and the card advances to 100% after confirmation.
+   Keep the token out of chat, source control, and `NEXT_PUBLIC_` variables. For a hosted deployment, configure it in the server environment too. If an organization requires approval, wait for approval before testing.
+6. Restart `pnpm dev`, then retry **Backup Now**. A successful dispatch returns HTTP 202 and a job ID. Customer progress stays on the repository card. Operators can inspect the worker in the repository's **Actions** tab. Completing the backup also requires the callback and worker secrets below.
 
-Until this setup is complete, new backup/restore requests return an error. Existing saved backups, verification and local recovery remain available. A new Vercel project or public URL is unnecessary.
-
-Rollout preparation on November 20, 2026: the live database's additive `progress` column was applied and verified in one transaction. Account, repository, dispatch and signed-checkpoint counts were unchanged. The private repository and Vercel worker variables still need configuration. The prepared branch passed 202 web tests (5 optional tests skipped), TypeScript checking and the production build, including local PostgreSQL migration and progress tests.
-
-## Customer progress
-
-The backup worker reports cloning, history checks, bundling, encryption, upload, proof preparation and confirmation to the shared-secret authenticated job endpoint. Reports can advance an active job's percentage; they cannot regress it, change a signed checkpoint or mark a job completed. Stage percentages are estimates rather than byte counts or remaining-time predictions. Progress updates are best effort so a temporary display outage cannot interrupt a signed backup.
-
-The signed-in user polls the exact account-owned job. Responses contain only status, estimated percentage, a stage label and the confirmed transaction hash on completion. A different account cannot inspect the job, and responses are private and not cached. Only the confirmed completion protocol produces 100%. Failed jobs stop the spinner and show a retry message; prepared jobs retain their saved transaction for reconciliation.
+If GitHub returns **Must have admin rights to Repository**, verify the configured token belongs to an account with access to the worker repository and grants Actions write access. Adding OAuth scopes to users' sign-in tokens does not grant them access to Rivet's worker repository.
 
 ## Callback and worker prerequisites
 
-- `backup.yml` and `restore.yml` must exist on the private repository's default branch. `RIVET_WORKER_REPO_REF` identifies that repository's branch or revision; `RIVET_SOURCE_REF` identifies the app source revision to execute.
-- Workers call `NEXT_PUBLIC_APP_URL/api/backup/callback`. For local development, use a public tunnel to port 3000; hosted workers cannot call localhost. Keep `NEXTAUTH_URL=http://localhost:3000` for local sign-in.
-- Private **customer repository** backups remain disabled on testnet. This restriction is separate from the mandatory private **worker repository**. The app verifies public customer repository visibility and write access; the backup worker clones it without user credentials.
-- Restores require a completed public backup belonging to the signed-in account. The requesting user's token is needed to create their restored repository and is forwarded only to the private worker. Previously stored private backups require operator-assisted recovery.
+- `backup.yml` and `restore.yml` must exist in `.github/workflows` on the worker repository's default branch, Actions must be enabled, and `RIVET_REPO_REF` must identify an existing branch or commit.
+- The backup worker posts to `NEXT_PUBLIC_APP_URL/api/backup/callback`. For local development, set `NEXT_PUBLIC_APP_URL` to a running public tunnel that forwards to port 3000. GitHub-hosted workers cannot call your machine's localhost directly. Keep `NEXTAUTH_URL=http://localhost:3000` for local sign-in.
+- Configure `PINATA_JWT` and `TREASURY_PRIVATE_KEY` in the worker repository's Actions secrets. Its `BACKUP_CALLBACK_SECRET` must match the app's `BACKUP_CALLBACK_SECRET`; if omitted, the app and worker both fall back to the same `NEXTAUTH_SECRET`.
+- Private repository backups and restores are disabled on testnet. Interactive backups use the session token to verify public visibility and repository write access; the token is not forwarded to backup Actions runs. Workers independently verify public visibility and clone without credentials. Webhooks use the account already registered for the repository, including collaborator pushes, and never fall back to an arbitrary user.
+
+The dispatch token starts jobs in Rivet's repository. It does not replace the requesting user's token for creating a restored repository under their account. Restores require a completed public backup belonging to that account. Previously stored private backups require operator-assisted recovery and must not be made public to bypass this restriction.
+
+
+## Backup progress
+
+The prepared `fix/private-workers-and-progress` branch restores an estimated percentage and stage label inside Rivet and removes customer-facing Actions links. It uses the existing worker coordinates and dispatch credential, including the Vercel defaults and legacy aliases. Merging it does not require another GitHub repository or a new hosting account.
+
+The worker reports cloning, history checks, bundling, encryption, upload, proof preparation and confirmation through the shared-secret authenticated job endpoint. Reports advance an active job's percentage without regressing it, changing its signed checkpoint or marking it complete. Only confirmed completion produces 100%. Updates are best effort so a display outage cannot interrupt the backup.
+
+Signed-in users can poll only their account-owned jobs. Responses include status, estimated percentage, a stage label and the confirmed transaction hash on completion. They contain no recovery keys or worker URLs, and use private, uncached responses.
+
+The additive `WorkerDispatch.progress` column was applied and verified on the live database on November 20, 2026. Account, repository, dispatch and signed-checkpoint counts were preserved. Future installations should run `pnpm --filter @rivet/web run workers:setup` before deploying this branch.
+
+Removing an Actions link does not make public workflow history private. The owner accepted continuing with that visibility temporarily while preparing the hosting move.
+
+## Future hosting direction
+
+Recommended starting architecture: keep the website and API on Vercel, move backup/restore execution to one Linux VPS with a durable queue, and keep the current database and IPFS providers initially. Jobs must continue to use account ownership checks, resource limits, saved signed checkpoints, idempotent completion and authenticated progress. GitHub remains the source host; customer operations should no longer dispatch Actions workflows after migration.
+
+Start VPS sizing discussions at 2 vCPU and 4 GiB RAM with enough temporary disk for the largest permitted repository. Validate actual memory, disk and throughput before choosing a plan, and begin with low job concurrency. A VPS requires OS updates, process supervision and monitoring. A managed container/background worker host is an alternative if reducing server administration matters more than control. Ordinary shared web hosting is a poor fit for long-running Git jobs and temporary repository storage.
+
+Choose monthly billing initially. Annual payment is optional where the selected provider offers it; it is not a technical requirement. Provider charges for compute, traffic, storage, snapshots and managed databases must be considered separately. Select a provider and confirm its current price before provisioning. No paid hosting has been provisioned by this change.
 
 ## Updating the existing deployment
 
