@@ -2,11 +2,10 @@ import Link from 'next/link';
 import RepoListClient from './RepoListClient';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowUpRight } from 'lucide-react';
 import { HelpButton } from '@/components/ActionDialog';
 import { SyncButtonClient } from './SyncButtonClient';
 import { AutoSyncToggle } from '@/components/AutoSyncToggle';
-import { WalletIdentity } from '@/components/WalletIdentity';
 import { db } from '@/lib/db';
 import type { Repository } from '@prisma/client';
 import styles from './page.module.css';
@@ -103,9 +102,10 @@ export default async function Dashboard() {
       {/* Dashboard Header & Stats */}
       <div className={styles.header}>
         <div className={styles.header__content}>
+          <div className={styles.eyebrow}>Your workspace <span className={styles.networkBadge}><span /> CKB testnet</span></div>
           <h1 className={styles.title}>Your backups</h1>
           <p className={styles.subtitle}>
-            Your code, safely backed up. Rivet covers backup fees.
+            A home for your repositories. A backup for what comes next.
           </p>
         </div>
 
@@ -116,13 +116,15 @@ export default async function Dashboard() {
             <p>Choose a public repository and select <strong>Back up now</strong>. Rivet saves its Git history to IPFS and records a proof on CKB testnet.</p>
             <p><strong>Refresh repositories</strong> reloads your GitHub repository list. <strong>Update backup</strong> saves a newer version of a repository you have already backed up.</p>
             <p><strong>Auto-backup</strong> starts backups when Rivet receives GitHub push events for your repositories.</p>
-            <p>You can back up without connecting a wallet. The optional developer identity section links backup proofs to your JoyID wallet.</p>
+            <p>You can back up without connecting a wallet. Open <strong>Developer identity</strong> in the navigation to link backup proofs to your JoyID wallet.</p>
           </HelpButton>
         </div>
       </div>
 
+      <div className={styles.backupNote}><span>Public Git history. Encrypted backups. Fees covered by Rivet.</span><Link href="/docs#restore">Recovery guide <ArrowUpRight size={14} aria-hidden="true" /></Link></div>
+
       {githubError && (
-        <div style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className={styles.errorNotice} role="alert">
           <AlertCircle size={20} />
           <div>
             <strong>GitHub API Error:</strong> {githubError}.<br/>
@@ -132,7 +134,6 @@ export default async function Dashboard() {
       )}
 
       <RepoListClient repos={repos} />
-      <WalletIdentity />
     </div>
   );
 }

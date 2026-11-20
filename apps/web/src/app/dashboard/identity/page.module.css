@@ -1,0 +1,124 @@
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  min-width: 0;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 0 28px;
+}
+.eyebrow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.eyebrow span {
+  color: var(--color-brand-primary);
+}
+.header h1 {
+  font-size: clamp(28px, 3vw, 36px);
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+}
+.description {
+  max-width: 55ch;
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+}
+.emblem {
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ff550030;
+  border-radius: 24px;
+  color: var(--color-brand-primary);
+  background: radial-gradient(circle at top right, #ff550018, #ff550004);
+}
+.note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  margin-bottom: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-secondary);
+}
+.note p {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.note strong {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  background: var(--color-brand-primary);
+  border-radius: 50%;
+}
+.network {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+@media (max-width: 640px) {
+  .header {
+    align-items: flex-start;
+    padding: 0 0 24px;
+    gap: 16px;
+  }
+  .emblem {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+  .emblem svg {
+    width: 30px;
+    height: 30px;
+  }
+  .eyebrow {
+    font-size: 9px;
+    gap: 8px;
+  }
+  .header h1 {
+    font-size: 28px;
+  }
+  .note {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 14px;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .dot {
+    margin-top: 7px;
+  }
+  .note p {
+    flex: 1;
+  }
+  .network {
+    margin-left: 16px;
+    width: 100%;
+  }
+}

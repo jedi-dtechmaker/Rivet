@@ -46,11 +46,12 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        <Providers>
+        <a href="#main-content" className="skip-link">Skip to content</a>
+        <Providers session={session}>
           <Header />
           <div style={{ display: 'flex', paddingTop: 'var(--header-height)' }}>
             <Sidebar />
-            <main style={{ flex: 1, minWidth: 0, overflowX: 'hidden' }}>
+            <main id="main-content" tabIndex={-1} style={{ flex: 1, minWidth: 0, overflowX: 'hidden' }}>
               {children}
             </main>
           </div>
