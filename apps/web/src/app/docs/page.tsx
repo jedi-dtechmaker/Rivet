@@ -35,7 +35,7 @@ export default function DocsPage() {
         <article className={styles.card}><h3>Update backup</h3><p>Save the latest history of a repository you have already backed up.</p></article>
         <article className={styles.card}><h3>Auto-backup</h3><p>Enable GitHub push notifications for your already backed-up public repositories. Rivet starts a new backup when a notification arrives.</p></article>
       </div>
-      <details className={styles.details}><summary>A backup is taking longer than expected</summary><div><p>Use <strong>View progress</strong> to check the worker run. A slow or interrupted status request does not necessarily mean the backup stopped. Check the existing run before starting another backup.</p><p>If automatic backup setup fails, check your GitHub repository admin permissions and sign in again to refresh webhook access. A newly backed-up repository may need Auto-backup turned off and on to install its hook.</p></div></details>
+      <details className={styles.details}><summary>A backup is taking longer than expected</summary><div><p>Check the progress percentage on your repository card. It estimates completed stages; confirmation can take longer than earlier steps. A slow or interrupted status request does not necessarily mean the backup stopped. Check the existing run before starting another backup.</p><p>If automatic backup setup fails, check your GitHub repository admin permissions and sign in again to refresh webhook access. A newly backed-up repository may need Auto-backup turned off and on to install its hook.</p></div></details>
     </section>
     <section id="identity" className={styles.section}>
       <h2>An identity you control</h2>

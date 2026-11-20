@@ -24,10 +24,6 @@ on:
         description: 'Existing anchor cell to reuse, as 0x<txHash>:<index>. Empty creates a new cell.'
         required: false
         type: string
-      githubToken:
-        description: "The requesting user's GitHub token (masked immediately)"
-        required: false
-        type: string
 
 concurrency:
   group: rivet-backup-treasury
@@ -36,11 +32,16 @@ concurrency:
 
 jobs:
   backup:
+    if: ${{ github.event.repository.private == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout Rivet
         uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.RIVET_SOURCE_REPO || github.repository }}
+          ref: ${{ vars.RIVET_SOURCE_REF || github.sha }}
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -55,13 +56,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      # Must run before the token is used anywhere, so it never lands in a log.
-      - name: Mask the user token
-        if: ${{ inputs.githubToken != '' }}
-        env:
-          USER_GITHUB_TOKEN: ${{ inputs.githubToken }}
-        run: echo "::add-mask::$USER_GITHUB_TOKEN"
 
       - name: Run backup worker
         working-directory: apps/web

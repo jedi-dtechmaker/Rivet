@@ -68,3 +68,36 @@ test('PostgreSQL coalesces concurrent pushes, preserves one signed checkpoint an
     await prisma.$disconnect();
   }
 });
+
+
+test('PostgreSQL stage updates never regress progress, mutate checkpoints or reopen terminal jobs', { skip: !process.env.RIVET_TEST_DATABASE_URL }, async () => {
+  process.env.DATABASE_URL = process.env.RIVET_TEST_DATABASE_URL;
+  const { prisma } = require('../src/lib/db.ts');
+  const { PATCH } = require('../src/app/api/backup/job/route.ts');
+  const user = await prisma.user.create({ data: { githubId: `progress-${randomUUID()}` } });
+  const id = randomUUID(), repository = 'owner/progress-fixture';
+  const checkpoint = { preserved: 'private-checkpoint-fixture' };
+  const previous = process.env.BACKUP_CALLBACK_SECRET;
+  process.env.BACKUP_CALLBACK_SECRET = 'local-test-worker-secret';
+  const report = stage => PATCH(new Request('https://rivet.example/api/backup/job', {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-backup-secret': 'local-test-worker-secret' },
+    body: JSON.stringify({ jobId: id, repo: repository, stage }),
+  }));
+  try {
+    await prisma.workerDispatch.create({ data: { id, userId: user.id, kind: 'backup', repository, checkpoint } });
+    await Promise.all(['uploading', 'cloning', 'confirming', 'bundling'].map(report));
+    const job = await prisma.workerDispatch.findUniqueOrThrow({ where: { id } });
+    assert.equal(job.progress, 90); assert.equal(job.state, 'queued'); assert.deepEqual(job.checkpoint, checkpoint);
+    for (const state of ['failed', 'completed']) {
+      await prisma.workerDispatch.update({ where: { id }, data: { state, progress: 25 } });
+      assert.equal((await report('confirming')).status, 200);
+      const terminal = await prisma.workerDispatch.findUniqueOrThrow({ where: { id } });
+      assert.equal(terminal.state, state); assert.equal(terminal.progress, 25); assert.deepEqual(terminal.checkpoint, checkpoint);
+    }
+  } finally {
+    await prisma.workerDispatch.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } }); await prisma.$disconnect();
+    if (previous === undefined) delete process.env.BACKUP_CALLBACK_SECRET;
+    else process.env.BACKUP_CALLBACK_SECRET = previous;
+  }
+});

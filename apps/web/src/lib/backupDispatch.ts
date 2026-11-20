@@ -3,31 +3,21 @@ import { reserveWorkerDispatch } from '@/lib/worker-quota';
 import { prisma } from '@/lib/db';
 
 /**
- * Dispatches jobs to the Rivet GitHub Actions workers.
- *
- * Vercel serverless functions have no `git` binary, a read-only filesystem and a
- * 10-60s timeout, so all git work (backup and restore) runs in the
- * "Repo Backup Worker" / "Repo Restore Worker" workflows.
- *
- * Configuration is optional-first: on Vercel the repository coordinates and
- * deployment URL come from the platform, so the only genuinely required value is
- * a token able to dispatch the workflow.
- *
- * Both RIVET_* and PROOF_* variable names are accepted (RIVET_* wins) so older
- * deployments keep working after the rename.
+ * Git work runs in a separately configured private worker repository.
+ * Never infer the worker from the public source repository or a Vercel checkout.
  */
 
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 export type DispatchResult =
-  | { ok: true; jobId: string; runUrl: string; startedAt: string; coalesced?: boolean; dispatchUncertain?: boolean }
+  | { ok: true; jobId: string; startedAt: string; coalesced?: boolean; dispatchUncertain?: boolean }
   | { ok: false; status: number; error: string };
 
 export function isValidRepoFullName(value: unknown): value is string {
   return typeof value === 'string' && REPO_PATTERN.test(value);
 }
 
-/** Read the first defined value among RIVET_*, PROOF_* and the Vercel default. */
+/** Workflow filename aliases are retained for existing deployments. */
 function env(...names: string[]): string | undefined {
   for (const name of names) {
     const value = process.env[name];
@@ -37,15 +27,10 @@ function env(...names: string[]): string | undefined {
 }
 
 function resolveWorkflowRepo(): { owner: string; name: string; ref: string } | null {
-  const owner = env(
-    'RIVET_REPO_OWNER',
-    'PROOF_REPO_OWNER',
-    'VERCEL_GIT_REPO_OWNER',
-  );
-  const name = env('RIVET_REPO_NAME', 'PROOF_REPO_NAME', 'VERCEL_GIT_REPO_SLUG');
-  const ref = env('RIVET_REPO_REF', 'PROOF_REPO_REF', 'VERCEL_GIT_COMMIT_REF') || 'main';
-
-  if (!owner || !name) return null;
+  const owner = process.env.RIVET_WORKER_REPO_OWNER;
+  const name = process.env.RIVET_WORKER_REPO_NAME;
+  const ref = process.env.RIVET_WORKER_REPO_REF || 'main';
+  if (!owner || !name || !isValidRepoFullName(`${owner}/${name}`)) return null;
   return { owner, name, ref };
 }
 
@@ -57,7 +42,7 @@ function resolveAppUrl(): string | null {
 }
 
 /**
- * Dispatch any workflow in the Rivet repository.
+ * Dispatch a workflow only after GitHub confirms the worker repository is private.
  * A jobId is generated and injected into the inputs automatically.
  */
 export async function dispatchWorkflow(opts: {
@@ -72,10 +57,9 @@ export async function dispatchWorkflow(opts: {
 
   if (!target) {
     console.error(
-      '[dispatch] Cannot resolve the Rivet repository. Set RIVET_REPO_OWNER and ' +
-        'RIVET_REPO_NAME if not running on Vercel.',
+      '[dispatch] Configure RIVET_WORKER_REPO_OWNER and RIVET_WORKER_REPO_NAME for a private repository.',
     );
-    return { ok: false, status: 500, error: 'Workers are not configured on the server' };
+    return { ok: false, status: 503, error: 'Private backup and restore workers are not configured. Please contact support.' };
   }
 
   if (!opts.token) {
@@ -87,11 +71,27 @@ export async function dispatchWorkflow(opts: {
 
   if (process.env.RIVET_WORKERS_ENABLED === 'false') return { ok: false, status: 503, error: 'Backup and restore workers are temporarily paused.' };
   if (!opts.userId) return { ok: false, status: 401, error: 'Sign in before starting a worker.' };
+  // Check on every dispatch, including coalesced requests. A visibility change or
+  // failed lookup must never send customer activity to a public repository.
+  try {
+    const response = await fetch(`https://api.github.com/repos/${target.owner}/${target.name}`, {
+      headers: { Authorization: `Bearer ${opts.token}`, Accept: 'application/vnd.github+json' },
+      signal: AbortSignal.timeout(15000), cache: 'no-store', redirect: 'error',
+    });
+    if (!response.ok) throw new Error('Worker repository lookup failed.');
+    const repository = await response.json();
+    if (repository.private !== true || repository.visibility !== 'private' ||
+        repository.full_name?.toLowerCase() !== `${target.owner}/${target.name}`.toLowerCase()) {
+      throw new Error('Worker repository must be private.');
+    }
+  } catch {
+    console.error('[dispatch] Cannot confirm private worker repository access');
+    return { ok: false, status: 503, error: 'Backups and restores are temporarily paused while private workers are configured.' };
+  }
   try {
     const quota = await reserveWorkerDispatch(opts.userId, jobId, opts.kind, opts.backup);
     if (!quota.allowed) return { ok: false, status: 429, error: quota.error };
-    if (quota.existing) return { ok: true, jobId: quota.existing.id, startedAt: quota.existing.createdAt.toISOString(),
-      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}`, coalesced: true };
+    if (quota.existing) return { ok: true, jobId: quota.existing.id, startedAt: quota.existing.createdAt.toISOString(), coalesced: true };
   } catch {
     console.error('[dispatch] Worker budget storage is unavailable');
     return { ok: false, status: 503, error: 'Could not check the worker budget. Please retry shortly.' };
@@ -118,8 +118,7 @@ export async function dispatchWorkflow(opts: {
 
     // Success is 204 No Content.
     if (!res.ok) {
-      if (res.status >= 500) return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true,
-        runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}` };
+      if (res.status >= 500) return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true };
       // Only a definitive rejection releases the repository. A timeout or 5xx may have queued the workflow.
       if (res.status >= 400 && res.status < 500) {
         try { await prisma.workerDispatch.updateMany({ where: { id: jobId, state: 'queued' }, data: { state: 'failed' } }); }
@@ -142,13 +141,11 @@ export async function dispatchWorkflow(opts: {
     return {
       ok: true,
       jobId,
-      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}`,
       startedAt: new Date().toISOString(),
     };
   } catch (e: any) {
     console.error('[dispatch] GitHub dispatch response is uncertain; retaining job', jobId);
-    return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true,
-      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}` };
+    return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true };
   }
 }
 

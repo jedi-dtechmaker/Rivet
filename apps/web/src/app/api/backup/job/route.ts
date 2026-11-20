@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { workerAuthorized } from '@/lib/worker-auth';
+import { BACKUP_STAGES } from '@/lib/backup-progress';
 import { prepareBackupJob } from '@/lib/backup-jobs';
 
 export async function GET(request: Request) {
@@ -21,4 +22,22 @@ export async function POST(request: Request) {
     const saved = await prepareBackupJob(body.jobId, body.repo, body.checkpoint);
     return NextResponse.json({ checkpoint: saved }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch { return NextResponse.json({ error: 'Could not save this backup transaction. Keep the same job for recovery.' }, { status: 409 }); }
+}
+
+/** The shared worker secret authenticates stage updates; values cannot regress. */
+export async function PATCH(request: Request) {
+  if (!workerAuthorized(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const body = await request.json();
+    if (typeof body.jobId !== 'string' || typeof body.repo !== 'string' ||
+        typeof body.stage !== 'string' || !Object.hasOwn(BACKUP_STAGES, body.stage)) {
+      return NextResponse.json({ error: 'Invalid progress update' }, { status: 400 });
+    }
+    const progress = BACKUP_STAGES[body.stage as keyof typeof BACKUP_STAGES].percent;
+    await prisma.workerDispatch.updateMany({ where: {
+      id: body.jobId, repository: body.repo.toLowerCase(), kind: 'backup',
+      state: { in: ['queued', 'prepared'] }, progress: { lt: progress },
+    }, data: { progress } });
+    return NextResponse.json({ acknowledged: true }, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch { return NextResponse.json({ error: 'Could not update backup progress' }, { status: 503 }); }
 }

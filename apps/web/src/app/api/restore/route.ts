@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
         accepted: true,
         jobId: result.jobId,
         targetRepoName,
-        runUrl: result.runUrl,
         startedAt: result.startedAt,
       },
       { status: 202 },

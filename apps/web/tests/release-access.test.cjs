@@ -9,7 +9,7 @@ const restoreRoute = require('../src/app/api/restore/route.ts');
 const updateRoute = require('../src/app/api/repo/update/route.ts');
 const webhookRoute = require('../src/app/api/webhook/github/route.ts');
 const restorations = [];
-const names = ['NEXTAUTH_URL', 'GITHUB_WEBHOOK_SECRET', 'RIVET_REPO_OWNER', 'RIVET_REPO_NAME', 'GH_DISPATCH_TOKEN', 'NEXT_PUBLIC_APP_URL'];
+const names = ['NEXTAUTH_URL', 'GITHUB_WEBHOOK_SECRET', 'RIVET_WORKER_REPO_OWNER', 'RIVET_WORKER_REPO_NAME', 'GH_DISPATCH_TOKEN', 'NEXT_PUBLIC_APP_URL'];
 let environment;
 
 function model(target, name, implementation) {
@@ -21,7 +21,7 @@ function model(target, name, implementation) {
 
 beforeEach(() => {
   environment = Object.fromEntries(names.map(name => [name, process.env[name]]));
-  Object.assign(process.env, { NEXTAUTH_URL: 'https://rivet.example', NEXT_PUBLIC_APP_URL: 'https://rivet.example', GITHUB_WEBHOOK_SECRET: 'webhook-secret', RIVET_REPO_OWNER: 'operator', RIVET_REPO_NAME: 'workers', GH_DISPATCH_TOKEN: 'operator-token' });
+  Object.assign(process.env, { NEXTAUTH_URL: 'https://rivet.example', NEXT_PUBLIC_APP_URL: 'https://rivet.example', GITHUB_WEBHOOK_SECRET: 'webhook-secret', RIVET_WORKER_REPO_OWNER: 'operator', RIVET_WORKER_REPO_NAME: 'workers', GH_DISPATCH_TOKEN: 'operator-token' });
   mock.method(nextAuth, 'getServerSession', async () => ({ user: { id: '123' }, accessToken: 'user-token' }));
   mock.method(db, 'findUserByGithubId', async () => ({ id: 'requester' }));
   mock.method(console, 'error', () => {});
@@ -90,6 +90,7 @@ test('restore reads only the requesting account backup and never dispatches fore
 test('authorized restore forwards only the owned backup and dispatches with the operator credential', async () => {
   model(prisma.repository, 'findFirst', async () => ({ userId: 'requester', name: 'real-source', isPrivate: false, encryptionKey: 'owned-key', encryptionIv: 'owned-iv' }));
   mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url === 'https://api.github.com/repos/operator/workers') return Response.json({ private: true, visibility: 'private', full_name: 'operator/workers' });
     assert.equal(options.headers.Authorization, 'Bearer operator-token');
     const { inputs } = JSON.parse(options.body);
     assert.equal(inputs.repoName, 'real-source');
@@ -122,6 +123,7 @@ test('collaborator push events use the registered repository owner rather than t
   model(prisma.user, 'findUnique', async ({ where }) => { assert.deepEqual(where, { id: 'registered-owner' }); return { id: where.id, autoSync: true }; });
   let dispatches = 0;
   mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url === 'https://api.github.com/repos/operator/workers') return Response.json({ private: true, visibility: 'private', full_name: 'operator/workers' });
     if (url === 'https://api.github.com/repos/owner/public') return new Response(JSON.stringify({ private: false, full_name: 'owner/public' }));
     dispatches++;
     assert.equal(JSON.parse(options.body).inputs.previousOutpoint, 'previous');

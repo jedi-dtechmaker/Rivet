@@ -13,6 +13,7 @@ ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "previousOutpoint" TEXT;
 ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "state" TEXT NOT NULL DEFAULT 'queued';
 ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "checkpoint" JSONB;
 ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "dirty" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE "WorkerDispatch" ADD COLUMN IF NOT EXISTS "progress" INTEGER NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS "WorkerDispatch_repository_state_idx" ON "WorkerDispatch"("repository", "state");
 CREATE TABLE IF NOT EXISTS "BackupDelivery" (
   "id" TEXT NOT NULL PRIMARY KEY,
