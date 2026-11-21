@@ -1,0 +1,18 @@
+{
+  "version": "rivet 0.1.0",
+  "valid": true,
+  "mappingDigest": "0xb48332694b9924e211e1e309ab5eb0662b0d755e0d25a7f90ee5829827e7d792",
+  "ownerKeyId": "0x4bd3634d95988d3e07061a4be22097a7e4dae5f238e0791c974fedc02dbd83a8",
+  "commitCount": 3,
+  "sourceAnchor": {
+    "anchorVersion": 2,
+    "blockHeight": "23131379",
+    "blockHash": "0x844d8b36922fc83f85f5ea12ba10a0cce989514bca571b46f60cbc9eb3abf16e"
+  },
+  "mappingAnchor": {
+    "txHash": "0x09e362fcb0c7c61e04a2d1266ce10cc9474a819b45b0224670171d2487251010",
+    "outputIndex": 0,
+    "blockHeight": "23131676",
+    "blockHash": "0x37f8473e2094424e342319c9f9c069cded3cad434d7fb2a8b729b3b598236629"
+  }
+}

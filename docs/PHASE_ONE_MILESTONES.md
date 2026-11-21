@@ -6,7 +6,7 @@ Source: [Funded proposal and discussion](https://talk.nervos.org/t/dis-rivet-dec
 
 This checklist tracks the funded Phase One proposal. Use `[ ]` for pending work and `[x]` after completion and verification. Record evidence in the completion log.
 
-Current status — November 18, 2026: Milestone 1 implementation and project acceptance are complete, based on the project owner's November 6 confirmation of the hosted onboarding, reconnect, unchanged-sync, passport retry, independent verification, privacy, and evidence checks. The earlier hosted configuration issues are resolved. Community/reviewer sign-off is requested in the [Milestone 1 delivery report](./PROGRESS_UPDATE_2026-10-30.md). Milestone 2 is active under the [CLI restore and hardening plan](./MILESTONE_TWO_PLAN.md).
+Current status — November 21, 2026: both milestones' implementation and project acceptance are complete. Milestone 1 follows the owner's November 6 hosted confirmation. Milestone 2 has a public cross-platform CLI, deployed security fixes, independently verified live exact/attribution recovery, and a confirmed mapping anchor. The owner selected GitHub source publication for the final acceptance record and checksummed public evidence. Funded Phase One project delivery is complete; community/reviewer sign-off remains separate. See the [Milestone 1 delivery report](./PROGRESS_UPDATE_2026-10-30.md), [Milestone 2 acceptance record](./MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md), and [remaining Phase Two scope](./PHASE_TWO_PLAN.md).
 
 Agreed onboarding adjustment: GitHub sign-in and backups come first. JoyID onboarding is optional and starts when the user clicks **Connect Wallet** on the dashboard. Rivet creates the subsidized CoTA cell after wallet connection, rather than on first backup as originally described in the proposal.
 
@@ -90,7 +90,7 @@ This status update records the project owner's completed live checks; it does no
 
 Implementation update — November 18, 2026: the installable CLI now supports exact and attribution restore, independently verifiable owner-signed mappings, resumable testnet mapping anchors and pushed-ref monitoring. RPC/Auto Sync hardening includes durable signed worker checkpoints, repository/delivery deduplication and replay-safe completion. Nineteen CLI checks and 193 web checks pass; five optional deployed-script checks are skipped with PostgreSQL enabled. Linux native commands pass against local HTTP fixtures. Cross-platform publication and live acceptance remain below. The project owner deferred hosted deployment; no new live backup or transaction is claimed.
 
-- [x] Release a cross-platform CLI binary for Linux, macOS, and Windows. [Preview `cli-v0.1.0-rc.2`](https://github.com/jedi-dtechmaker/Rivet/releases/tag/cli-v0.1.0-rc.2) includes Linux x64, macOS arm64 and Windows x64 executables and checksums; all platform build and installed-workflow jobs passed.
+- [x] Release a cross-platform CLI binary for Linux, macOS, and Windows. [Preview `cli-v0.1.0-rc.3`](https://github.com/jedi-dtechmaker/Rivet/releases/tag/cli-v0.1.0-rc.3) includes Linux x64, macOS arm64 and Windows x64 executables and checksums; all platform build and installed-workflow jobs passed, and every public asset/checksum was independently verified.
 - [x] Implement `rivet backup <repo>` to trigger a hosted mirror backup and print the CKB transaction hash and IPFS CID. Installed-command/API tests use fixtures; live acceptance remains below. Without a repository argument, the CLI detects the GitHub origin.
 - [x] Implement `rivet status <repo>` to show the latest anchored proof and block height, with optional private recovery export. Source API and installed-command tests pass; live acceptance remains below.
 - [x] Implement `rivet verify <tx_hash>` to independently verify a proof against CKB and IPFS using an exported recovery file, with local encrypted-bundle recovery also supported. Legacy/v2 checks pass with RPC fixtures; live acceptance remains below.
@@ -99,22 +99,24 @@ Implementation update — November 18, 2026: the installable CLI now supports ex
 
 ### Restore modes
 
-- [x] Exact Restore preserves original commit hashes and verifies the Merkle proof locally; v2 also authenticates bundle bytes and refs, including annotated tag object IDs. Live acceptance remains pending.
+- [x] Exact Restore preserves original commit hashes and verifies the Merkle proof locally; v2 also authenticates bundle bytes and refs, including annotated tag object IDs. Live recovery preserves all three source commits and all three refs and passes Git integrity checks.
 - [x] Attribution Restore integrates `git-filter-repo` for email remapping, preserving empty commits and merges.
-- [x] Attribution Restore generates a signed hash-mapping proof, provides a testnet anchoring command, and independently verifies the mapping, trusted owner key and separate anchor. Saved signed receipts recover uncertain submissions. Local HTTP fixtures pass; a live testnet mapping transaction remains part of acceptance.
+- [x] Attribution Restore generates a signed hash-mapping proof, provides a testnet anchoring command, and independently verifies the mapping, trusted owner key and separate anchor. Saved signed receipts recover uncertain submissions. The approved live mapping transaction is confirmed in block 23131676 and independently verified by the public npm CLI and Linux executable.
 
 ### Hardening and documentation
 
 - [x] Add bounded retries for transient reads, preserve permanent RPC failures, and reconcile uncertain transaction submissions from saved signed bytes and hashes.
-- [x] Improve Auto Sync reliability with durable repository reservations, webhook-delivery deduplication, coalesced follow-up jobs, current-head reconciliation and callback replay protection. Refresh existing hook activation/secrets, handle pagination, and bound setup concurrency. PostgreSQL concurrency checks pass; merged server/worker code and the additive live schema are deployed. Real worker acceptance remains pending.
+- [x] Improve Auto Sync reliability with durable repository reservations, webhook-delivery deduplication, coalesced follow-up jobs, current-head reconciliation and callback replay protection. Refresh existing hook activation/secrets, handle pagination, and bound setup concurrency. PostgreSQL concurrency checks and two hosted v2 backups pass; the additive schema and subsequent dependency security fixes are deployed.
 - [x] Publish CLI documentation and a usage guide. The published preview includes the installation, saved token sign-in, project commands and independent recovery guide.
 
 ### Acceptance
 
 - [x] Publish the CLI for all three target platforms. Public archive installation and checksum were independently verified. On November 20, 2026, the published CLI also passed live login, existing confirmed-backup status and logout after the merged deployment and additive database update.
-- [ ] Demonstrate the restore flow and verify its proofs on testnet.
-- [ ] Record release links, testnet transactions, and delivery evidence.
-- [ ] Mark Milestone 2 complete after its acceptance criteria pass.
+- [x] Demonstrate the restore flow and verify its proofs on testnet. Published-release exact recovery and complete signed attribution/anchor verification pass with independent CKB reads and no saved Rivet login.
+- [x] Publish final release/testnet delivery evidence. The acceptance record and checksummed evidence directory, including the owner public key, are published as repository source files.
+- [x] Mark Milestone 2 implementation and project acceptance complete. Community/reviewer sign-off remains separate.
+
+Live project acceptance complete — November 21, 2026: two v2 backups, consumed-predecessor/single-successor checks, independent exact/attribution recovery, trusted owner-signed mapping verification, its confirmed separate anchor, and five negative checks pass for `jedi-dtechmaker/DEXsol-skannar`. Security PR #3 is merged and deployed. Public `cli-v0.1.0-rc.3` has green platform/tag checks and verified downloads. The public CLI passes recovery, mapping-anchor verification and live login/status/logout. The final evidence is published in the repository. See the [live evidence record](./MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md).
 
 The proposal's CLI overview also describes `rivet watch <dir>` for local repository monitoring and backups on push. It is tracked here separately because it is not listed in the detailed Milestone 2 command list.
 
@@ -127,13 +129,13 @@ The proposal's CLI overview also describes `rivet watch <dir>` for local reposit
 - [x] Document the testnet privacy limitation in the deployment update guide and worker setup.
 - [x] Add a hash of sorted refs and their tip commits to the anchor payload. V2 source implementation and tampering tests cover refnames and direct object IDs.
 - [x] Add the Git bundle's SHA-256 to the anchor payload for byte-for-byte verification. V2 binds the plaintext digest and uploaded encrypted CID.
-- [x] Verify restored repository state without relying on the original GitHub repository or Rivet server. Automated encrypted CLI recovery removes the source first and uses only a recovery file, bundle and independent RPC fixture; live testnet demonstration remains pending.
-- [x] Preserve the consume-and-replace anchor cell lifecycle described in the discussion. Worker construction tests cover legacy capacity enlargement and a single successor; stale or uncertain predecessors stop instead of creating another chain. Live transaction acceptance remains pending.
+- [x] Verify restored repository state without relying on the original GitHub repository or Rivet server. The public-release live recovery uses an empty credential directory, unavailable Rivet origin, saved encrypted bundle and independent CKB RPC. Every commit/ref and Git integrity check passes.
+- [x] Preserve the consume-and-replace anchor cell lifecycle described in the discussion. Two confirmed v2 backups consume their predecessor and create exactly one successor each; capacity changes and fees are independently verified. Automated tests also reject stale or uncertain predecessors.
 - [x] Keep UI, CLI, and documentation clear that an anchor proves repository state existed by a CKB block height; it does not certify commit timestamps or authorship. Updated the repository proof banner and README alongside the CLI/verification guide.
 
 ## Outside Phase One
 
-The proposal reserves these items for separate Phase Two funding:
+The proposal reserves these items for separate Phase Two funding. The [Phase Two plan](./PHASE_TWO_PLAN.md) records the remaining production scope and proposed delivery order:
 
 - CKB Mainnet deployment.
 - Dedicated domain and VPS hosting, replacing the public GitHub Actions worker.
@@ -146,6 +148,7 @@ The proposal reserves these items for separate Phase Two funding:
 
 | Date | Completed deliverable | Evidence |
 | --- | --- | --- |
+| November 21, 2026 | Milestone 2 implementation and live project acceptance complete | Public `cli-v0.1.0-rc.3` passes Linux/macOS/Windows release/tag checks; all public asset hashes match. Security PR #3 is merged and deployed. Two hosted v2 backups establish predecessor/successor lifecycle and fees. Public-release exact recovery preserves all commits/refs; signed attribution replay and the separate mapping anchor at block 23131676 pass through npm and Linux native commands. Live login/status/logout and five negative checks pass. The owner selected GitHub source publication for the final acceptance record, evidence directory and owner public key. Funded Phase One project delivery is complete; community/reviewer sign-off remains separate. [Acceptance record](./MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md). |
 | November 18, 2026 | Attribution, monitoring, hardening and native release tooling implemented | Nineteen CLI checks and 193 web checks pass, zero failures; five optional deployed-script checks skipped with PostgreSQL enabled. Linux standalone commands cover exact/attribution recovery and mapping-anchor receipt replay through local HTTP fixtures. TypeScript and production build pass; additive worker SQL applies to the disposable database. Hosted rollout was deferred by the project owner. Cross-platform release evidence and live acceptance remain open. [Delivery plan](./MILESTONE_TWO_PLAN.md), [mapping specification](./ATTRIBUTION_PROOF.md), [CLI guide](../packages/cli/README.md). |
 | November 10, 2026 | Installed CLI development package, saved sign-in and project workflow | Built `dist/rivet-cli-0.1.0.tgz` and checksum. Thirteen CLI tests pass, including offline npm installation, invocation through the generated command, saved server-scoped login/logout, GitHub origin detection, backup/status, encrypted restore after source deletion, and independent verification after logout. Network fixtures are used. Web suite: 153 pass, zero failures, 13 environment-dependent skips; TypeScript, production build and whitespace checks pass. New `GET /api/cli/account` authenticates the existing GitHub/Rivet account without exposing wallet or token data. [CLI guide](../packages/cli/README.md), [delivery plan](./MILESTONE_TWO_PLAN.md). Hosted rollout, actual macOS/Windows runs and public release/live acceptance remain pending. |
 | November 10, 2026 | Milestone 2 kickoff: v2 anchors and independent exact restore | Worker, CLI, CLI status, CoTA readers/verifier and public lookup support legacy/v2 anchors. V2 binds sorted commits, refs, plaintext bundle SHA-256, encrypted CID and count. Recovery tests delete the source before restoring branches and annotated tags; worker tests preserve the consume-and-replace lifecycle and calculate enlarged capacity. Six CLI checks and 152 web checks passed; 13 environment-dependent checks skipped. TypeScript, production build and whitespace checks passed. Localhost RPC tests needed socket access; all passed when rerun with it. Three-platform CLI CI is configured; no platform runs, publication, deployment or live v2 transaction is claimed. [Delivery plan](./MILESTONE_TWO_PLAN.md), [format specification](./BACKUP_ANCHOR_V2.md). |

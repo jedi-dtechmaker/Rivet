@@ -1,0 +1,26 @@
+[
+  {
+    "name": "build (windows-latest)",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44847526390/job/136670800844"
+  },
+  {
+    "name": "build (ubuntu-latest)",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44847526390/job/136670801141"
+  },
+  {
+    "name": "build (macos-latest)",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44847526390/job/136670801243"
+  },
+  {
+    "name": "publish",
+    "status": "completed",
+    "conclusion": "skipped",
+    "url": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44847526390/job/136671529283"
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "valid": true,
+  "releaseTag": "cli-v0.1.0-rc.3",
+  "version": "rivet 0.1.0",
+  "installedOutsideCheckout": true,
+  "noSavedCredentials": true,
+  "rivetOriginUnavailable": true,
+  "sourceMirrorRemovedFromOriginalPath": true,
+  "gitTransport": "file",
+  "allowedFetchOrigins": [
+    "https://testnet.ckb.dev",
+    "https://ipfs.io",
+    "https://gateway.pinata.cloud"
+  ],
+  "commitCount": 3,
+  "refCount": 3,
+  "allCommitsMatch": true,
+  "allRefsMatch": true,
+  "gitFsck": "passed",
+  "commits": [
+    "24bca7d7c2e056603f074a1ccf886d0302e289af",
+    "2b6e51f30b85d373327602cc630d1401454c9187",
+    "66511d526ee857c9a66489179e1767afbd543a3c"
+  ],
+  "refs": [
+    "refs/heads/main 2b6e51f30b85d373327602cc630d1401454c9187",
+    "refs/heads/rivet-acceptance-20261121 24bca7d7c2e056603f074a1ccf886d0302e289af",
+    "refs/tags/rivet-acceptance-20261121 3dfada19e4407c07032fe6bd46ecbb68238b68b2"
+  ]
+}

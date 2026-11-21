@@ -1,0 +1,18 @@
+{
+  "valid": true,
+  "mode": "attribution",
+  "sourceAnchor": {
+    "anchorVersion": 2,
+    "blockHeight": "23131379",
+    "blockHash": "0x844d8b36922fc83f85f5ea12ba10a0cce989514bca571b46f60cbc9eb3abf16e"
+  },
+  "original": "/tmp/rivet-m2-dexsol.uk3gkm/attribution-recovery/original.git",
+  "restored": "/tmp/rivet-m2-dexsol.uk3gkm/attribution-recovery/rewritten.git",
+  "mappingFile": "/tmp/rivet-m2-dexsol.uk3gkm/attribution-recovery/mapping.json",
+  "mappingDigest": "0xb48332694b9924e211e1e309ab5eb0662b0d755e0d25a7f90ee5829827e7d792",
+  "ownerKeyId": "0x4bd3634d95988d3e07061a4be22097a7e4dae5f238e0791c974fedc02dbd83a8",
+  "commitCount": 3,
+  "refsHash": "0x04a28f09669274a7e46f80f498d3345335ff494945a211be50bf9c18012b30e1",
+  "signatureEffects": "Rewritten commit IDs change. Original commit and tag signatures are removed by git-filter-repo; original.git preserves the exact signed objects.",
+  "anchored": false
+}

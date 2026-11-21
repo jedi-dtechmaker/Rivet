@@ -1,0 +1,13 @@
+{
+  "protocol": "rivet-backup-proof-v2",
+  "network": "ckb-testnet",
+  "repository": "jedi-dtechmaker/DEXsol-skannar",
+  "txHash": "0x707f7244eb11df3e8928a0d490dafee3d315220ffa0db575f03b508b654b9d65",
+  "outputIndex": 0,
+  "ipfsCid": "bafkreifzvvelkrenc5ymn5lrw3pl67da5z74c5k6caoz56itdkujenhtei",
+  "merkleRoot": "0x024299f5ed015a0a01a27716879aa8704aa9bc60cb2353b74c4f323b349ab31d",
+  "refsHash": "0x94c65d076b1fe966c06effaa4054fd2412e83cd994063dfd80dffa0dd7cc2b82",
+  "bundleSha256": "0x9a687cce9b72f3852ced68c34816dee3194971d39537542bfeb0036396523f43",
+  "commitCount": 3,
+  "blockHeight": "23131463"
+}

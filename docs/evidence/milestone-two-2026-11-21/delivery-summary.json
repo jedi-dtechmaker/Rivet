@@ -1,0 +1,43 @@
+{
+  "status": "Milestone 2 implementation and project acceptance complete",
+  "completedDate": "2026-11-21",
+  "timezone": "Africa/Lagos",
+  "phaseOneProjectDelivery": "complete",
+  "communityReviewerSignOff": "separate and pending",
+  "release": "https://github.com/jedi-dtechmaker/Rivet/releases/tag/cli-v0.1.0-rc.3",
+  "evidenceDirectory": "docs/evidence/milestone-two-2026-11-21",
+  "acceptanceReport": "docs/MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md",
+  "nextPhasePlan": "docs/PHASE_TWO_PLAN.md",
+  "releaseWorkflow": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44851633570",
+  "releaseChecks": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44851633573",
+  "productionCommit": "92d648fa43970fad7b30bf4d951e19ea284c166c",
+  "mappingTransaction": "0x09e362fcb0c7c61e04a2d1266ce10cc9474a819b45b0224670171d2487251010",
+  "mappingOutputIndex": 0,
+  "mappingBlockHeight": "23131676",
+  "mappingDigest": "0xb48332694b9924e211e1e309ab5eb0662b0d755e0d25a7f90ee5829827e7d792",
+  "ownerPublicKeyFingerprint": "0x4bd3634d95988d3e07061a4be22097a7e4dae5f238e0791c974fedc02dbd83a8",
+  "mappingCapacityCkb": "97.00000000",
+  "mappingFeeCkb": "0.00000500",
+  "recoveryCommitCount": 3,
+  "recoveryRefCount": 3,
+  "verifiedPublicArtifacts": [
+    {
+      "name": "rivet-cli-0.1.0.tgz",
+      "sha256": "301028f135be4cd10f5df31a69e386fecc30ff546f94d7b85f92e41adbd3ba0b"
+    },
+    {
+      "name": "rivet-v0.1.0-linux-x64",
+      "sha256": "259c28e55fc5e4ec5c1c347a5df317d2ca4da041f90533cb3a131ff2ba3b49a3"
+    },
+    {
+      "name": "rivet-v0.1.0-darwin-arm64",
+      "sha256": "6208881fc1cd5b0d382444660789056e1797016d1739129cf9c2d8da6701d0c8"
+    },
+    {
+      "name": "rivet-v0.1.0-win32-x64.exe",
+      "sha256": "caa689780b913a273cf2a2c9cc4ffa914043a2674ad38ea8eac5566d46928724"
+    }
+  ],
+  "evidencePublicationChannel": "Owner-requested GitHub repository source publication",
+  "updatedSourceDocumentation": "Committed with the public evidence directory"
+}

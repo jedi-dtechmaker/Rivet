@@ -4,6 +4,8 @@
 
 Rivet backs up public GitHub repository history to encrypted IPFS bundles, anchors its commitments on CKB testnet, and restores verified Git mirrors. Export a private recovery file to recover independently of GitHub and Rivet.
 
+Funded Phase One implementation and project acceptance completed November 21, 2026. [CLI preview `cli-v0.1.0-rc.3`](https://github.com/jedi-dtechmaker/Rivet/releases/tag/cli-v0.1.0-rc.3) includes verified Linux, macOS and Windows artifacts. The [Milestone 2 record](docs/MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md) and checksummed evidence directory document the verified backup/recovery and mapping transactions. The next proposed scope is [Phase Two production readiness](docs/PHASE_TWO_PLAN.md): dedicated hosting, mainnet, private backups and operational/security work. Community/reviewer sign-off remains separate, and the broader product roadmap below includes future work.
+
 ---
 
 ## 🚨 The Problem

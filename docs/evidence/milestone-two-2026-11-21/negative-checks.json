@@ -1,0 +1,31 @@
+{
+  "allPassed": true,
+  "checks": [
+    {
+      "case": "wrong AES recovery key",
+      "rejected": true,
+      "exitCode": 1
+    },
+    {
+      "case": "altered anchored refs commitment",
+      "rejected": true,
+      "exitCode": 1
+    },
+    {
+      "case": "modified encrypted bundle",
+      "rejected": true,
+      "exitCode": 1
+    },
+    {
+      "case": "existing restore destination",
+      "rejected": true,
+      "exitCode": 1
+    },
+    {
+      "case": "tampered owner signature",
+      "rejected": true,
+      "exitCode": 1
+    }
+  ],
+  "existingDestinationPreserved": true
+}

@@ -1,0 +1,34 @@
+{
+  "valid": true,
+  "transitions": [
+    {
+      "previousTxHash": "0xf038aeb4d3a1c520fce05fc3df61f3635ca864f5e99a21adddbec3e635e4d12f",
+      "successorTxHash": "0x8bb202bcf2bb9915f646ba2aa6bf4294a10da11a8eb892ff3daa434063d4d145",
+      "consumesPreviousAnchor": true,
+      "successorAnchorCount": 1,
+      "previousCapacityCkb": "93.00000000",
+      "successorCapacityCkb": "225.00000000",
+      "capacityIncreaseCkb": "132.00000000",
+      "feeCkb": "0.00000672",
+      "blockHeight": "23131379"
+    },
+    {
+      "previousTxHash": "0x8bb202bcf2bb9915f646ba2aa6bf4294a10da11a8eb892ff3daa434063d4d145",
+      "successorTxHash": "0x707f7244eb11df3e8928a0d490dafee3d315220ffa0db575f03b508b654b9d65",
+      "consumesPreviousAnchor": true,
+      "successorAnchorCount": 1,
+      "previousCapacityCkb": "225.00000000",
+      "successorCapacityCkb": "225.00000000",
+      "capacityIncreaseCkb": "0.00000000",
+      "feeCkb": "0.00000672",
+      "blockHeight": "23131463"
+    }
+  ],
+  "firstV2CellStatus": "unknown",
+  "secondV2CellStatus": "live",
+  "latestAnchor": {
+    "anchorVersion": 2,
+    "blockHeight": "23131463",
+    "blockHash": "0xa943f54fcdbc740eb3b9e5c887340d4901acaea23780366dab8ad6fb952e01fa"
+  }
+}

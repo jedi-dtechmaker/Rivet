@@ -1,0 +1,11 @@
+{
+  "valid": true,
+  "releaseTag": "cli-v0.1.0-rc.3",
+  "server": "https://rivet-web-ten.vercel.app",
+  "login": "passed",
+  "status": "passed",
+  "logout": "passed",
+  "isolatedCredentialsRemoved": true,
+  "repository": "jedi-dtechmaker/DEXsol-skannar",
+  "latestTransaction": "0x707f7244eb11df3e8928a0d490dafee3d315220ffa0db575f03b508b654b9d65"
+}
