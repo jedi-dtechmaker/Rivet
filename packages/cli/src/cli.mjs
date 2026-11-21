@@ -42,6 +42,7 @@ Browser sign-in remains pending.`;
 
 function publicStatus(result) {
   const response = { status: result.status };
+  if (result.unchanged === true) response.unchanged = true;
   if (result.txHash) response.txHash = result.txHash;
   if (result.proof) {
     response.proof = Object.fromEntries(['protocol', 'network', 'repository', 'txHash', 'outputIndex', 'ipfsCid', 'merkleRoot',
@@ -139,8 +140,9 @@ export async function main(argv = process.argv.slice(2), context = {}) {
       if (values['no-wait']) return;
       const deadline = Date.now() + timeout * 1000;
       while (Date.now() < deadline) {
-        const status = await send(`/api/cli/status?repo=${encodeURIComponent(subject)}&since=${encodeURIComponent(result.startedAt)}${values['proof-out'] ? '&includeSecrets=true' : ''}`);
-        if (status.status === 'confirmed' && status.proof && status.proof.txHash !== result.previousTxHash) { await showStatus(status); return; }
+        const status = await send(`/api/cli/status?repo=${encodeURIComponent(subject)}&since=${encodeURIComponent(result.startedAt)}${result.jobId ? `&jobId=${encodeURIComponent(result.jobId)}` : ''}${values['proof-out'] ? '&includeSecrets=true' : ''}`);
+        if (status.status === 'failed') throw new Error('Backup interrupted. Check rivet status before starting another backup.');
+        if (status.status === 'confirmed' && status.proof && (status.unchanged === true || status.proof.txHash !== result.previousTxHash)) { await showStatus(status); return; }
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
       throw new Error('Backup is still pending. Use rivet status; do not dispatch another backup.');

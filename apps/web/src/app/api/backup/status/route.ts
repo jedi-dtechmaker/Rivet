@@ -39,10 +39,12 @@ export async function GET(req: NextRequest) {
       }, select: { state: true, progress: true, checkpoint: true } });
       if (!job) return NextResponse.json({ error: 'Backup job not found' }, { status: 404, headers: { 'Cache-Control': 'private, no-store' } });
       const checkpoint = job.checkpoint as { txHash?: string } | null;
+      const done = job.state === 'completed' || job.state === 'unchanged';
       return NextResponse.json({
-        status: job.state === 'completed' ? 'done' : job.state === 'failed' ? 'failed' : 'pending',
+        status: done ? 'done' : job.state === 'failed' ? 'failed' : 'pending',
         ...backupProgress(job.state, job.progress),
-        ...(job.state === 'completed' ? { ckbTxHash: checkpoint?.txHash ?? repo.ckbTxHash } : {}),
+        ...(done ? { ckbTxHash: checkpoint?.txHash ?? repo.ckbTxHash } : {}),
+        ...(job.state === 'unchanged' ? { unchanged: true } : {}),
       }, { headers: { 'Cache-Control': 'private, no-store' } });
     }
 

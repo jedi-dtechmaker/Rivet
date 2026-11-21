@@ -1,0 +1,29 @@
+{
+  "valid": true,
+  "verifiedAt": "2026-11-21T01:56:14.021Z",
+  "network": "ckb-testnet",
+  "transactionHash": "0x09e362fcb0c7c61e04a2d1266ce10cc9474a819b45b0224670171d2487251010",
+  "outputIndex": 0,
+  "mappingDigest": "0xb48332694b9924e211e1e309ab5eb0662b0d755e0d25a7f90ee5829827e7d792",
+  "ownerKeyId": "0x4bd3634d95988d3e07061a4be22097a7e4dae5f238e0791c974fedc02dbd83a8",
+  "mappingData": "0x52564d01b48332694b9924e211e1e309ab5eb0662b0d755e0d25a7f90ee5829827e7d792",
+  "blockHeight": "23131676",
+  "blockHash": "0x37f8473e2094424e342319c9f9c069cded3cad434d7fb2a8b729b3b598236629",
+  "confirmations": 90,
+  "signedAndBroadcast": true,
+  "approvedTransactionPreserved": true,
+  "fundingSource": "Owner-approved configured Rivet testnet treasury",
+  "fundingOutpoint": {
+    "index": "0x1",
+    "tx_hash": "0x707f7244eb11df3e8928a0d490dafee3d315220ffa0db575f03b508b654b9d65"
+  },
+  "fundingInputEmptyAndUntyped": true,
+  "mappingCapacityCkb": "97.00000000",
+  "feeShannons": "500",
+  "feeCkb": "0.00000500",
+  "treasuryOwnerLockPreserved": true,
+  "mappingCellStatus": "live",
+  "latestBackupTransaction": "0x707f7244eb11df3e8928a0d490dafee3d315220ffa0db575f03b508b654b9d65",
+  "latestBackupCellStatus": "live",
+  "backupAnchorUntouched": true
+}

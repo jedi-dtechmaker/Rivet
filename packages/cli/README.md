@@ -1,6 +1,6 @@
 # Rivet CLI
 
-Install Rivet once, sign in, then run `rivet` from your own projects on Windows, Linux or macOS. Git is required. The npm archive additionally needs Node.js 24+; standalone executables include their own Node runtime. Attribution restore also needs Python 3 and `git-filter-repo` 2.47.0. Hosted rollout and live testnet acceptance remain pending; browser OAuth is separate future work.
+Install Rivet once, sign in, then run `rivet` from your own projects on Windows, Linux or macOS. Git is required. The npm archive additionally needs Node.js 24+; standalone executables include their own Node runtime. Attribution restore also needs Python 3 and `git-filter-repo` 2.47.0. Public preview `cli-v0.1.0-rc.3` and hosted/testnet project acceptance are complete; browser OAuth is separate future work. The repository contains the live acceptance record and checksummed public evidence directory.
 
 ## Install
 
@@ -8,17 +8,17 @@ Versioned preview releases are distributed through [GitHub Releases](https://git
 
 Verify checksums before installation using `sha256sum -c <filename>.sha256` on Linux, `shasum -a 256 -c <filename>.sha256` on macOS, or `Get-FileHash <filename> -Algorithm SHA256` in PowerShell. Match the PowerShell hash to the supplied checksum file.
 
-Install a supplied archive using npm. From this source checkout, `pnpm cli:pack` builds `dist/rivet-cli-0.1.0.tgz` and its SHA-256 file without downloading dependencies. The installed CLI includes all runtime modules and does not need the Rivet checkout afterwards.
+Install the published preview using npm. From this source checkout, `pnpm cli:pack` builds `dist/rivet-cli-0.1.0.tgz` and its SHA-256 file without downloading dependencies. The installed CLI includes all runtime modules and does not need the Rivet checkout afterwards.
 
 ```sh
-npm install --global /absolute/path/to/rivet-cli-0.1.0.tgz
+npm install --global https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.3/rivet-cli-0.1.0.tgz
 rivet --version
 rivet --help
 ```
 
-Use an absolute archive path when installing from another directory. npm creates the `rivet` command on Linux/macOS and a Windows command shim. Its global executable directory must be on `PATH`.
+You can also install a downloaded archive by its absolute path. npm creates the `rivet` command on Linux/macOS and a Windows command shim. Its global executable directory must be on `PATH`.
 
-This package's saved-login flow requires the updated Milestone 2 server. Hosted rollout is still pending. For a configured local deployment, use `rivet login --server http://localhost:3000` after starting the app. Operators must deploy `GET /api/cli/account` together with the CLI update; this route needs no database migration.
+The updated Milestone 2 server is deployed at the default hosted origin. For a configured local deployment, use `rivet login --server http://localhost:3000` after starting the app. Operators of other deployments must provide `GET /api/cli/account` together with the CLI update; this route needs no database migration.
 
 ## Sign in once
 
@@ -57,6 +57,8 @@ Rivet detects `owner/repository` from the project's `origin` remote, including H
 **Current backups cover public repository history pushed to GitHub. Unpushed commits, uncommitted files, arbitrary local directories and private repositories are excluded.** The worker mirrors GitHub; the CLI does not upload the local directory. The server checks repository ownership or write access and enforces existing worker budgets. The operator credential runs the worker; your personal token is not forwarded to it. Wallet connection is not required.
 
 `backup` waits up to 900 seconds for a newly completed, confirmed backup, then prints its CKB transaction hash, IPFS CID and block height. It checks the dispatch time and previous transaction to avoid returning an older backup. Use `--timeout 1800` or `--no-wait` when appropriate. After a timeout, use `status` instead of dispatching again.
+
+With the matching server and worker update, unchanged v2 history and refs reuse the existing confirmed, live backup without another bundle upload or CKB transaction. The CLI reports `unchanged: true` and can export that backup's existing recovery material. A worker still checks GitHub history and counts against the worker quota. Changed refs, including branch or tag changes with no new commits, create a new snapshot; legacy anchors need a new v2 backup. This behavior requires a CLI built from this source together with the updated server and worker; previously published preview binaries do not include job-aware waiting.
 
 To save an independent recovery file outside the project:
 
@@ -151,7 +153,7 @@ The watcher resolves the project's GitHub origin and polls its pushed refs. It r
 
 ## Verification scope
 
-New worker backups use **v2 anchors**, which authenticate the sorted commit set, sorted refs and their object IDs, plaintext Git bundle SHA-256, encrypted IPFS CID, and commit count. Recovery exports use `rivet-backup-proof-v2`. Verification compares every commitment against the confirmed transaction, checks decrypted bytes before running Git, verifies commits and refs, and runs `git fsck`. See the [anchor specification](https://github.com/jedi-dtechmaker/Rivet/blob/cli-v0.1.0-rc.2/docs/BACKUP_ANCHOR_V2.md).
+New worker backups use **v2 anchors**, which authenticate the sorted commit set, sorted refs and their object IDs, plaintext Git bundle SHA-256, encrypted IPFS CID, and commit count. Recovery exports use `rivet-backup-proof-v2`. Verification compares every commitment against the confirmed transaction, checks decrypted bytes before running Git, verifies commits and refs, and runs `git fsck`. See the [anchor specification](https://github.com/jedi-dtechmaker/Rivet/blob/cli-v0.1.0-rc.3/docs/BACKUP_ANCHOR_V2.md).
 
 Existing 32-byte legacy anchors and `rivet-backup-proof-v1` files remain supported. They **do not authenticate the CID, bundle SHA-256 or branch/tag refs**. The CLI checks their original ordered commit set, preserves the supplied bundle's refs, and reports that limitation. A new backup is needed to gain v2 commitments; exporting an older backup does not upgrade its anchor.
 
@@ -159,8 +161,8 @@ The CLI trusts the selected RPC for committed status and headers. An anchor prov
 
 ## Development and validation
 
-The [self-test walkthrough](https://github.com/jedi-dtechmaker/Rivet/blob/cli-v0.1.0-rc.2/docs/CLI_SELF_TEST.md) covers installation, isolated fixture tests and real repository acceptance after the server rollout. Rivet does not yet publish a programming SDK.
+The [self-test walkthrough](../../docs/CLI_SELF_TEST.md) covers installation, isolated fixture tests and real repository acceptance. The repository's [live acceptance record](../../docs/MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md) includes the verified results and reproduction guide. Rivet does not yet publish a programming SDK.
 
 From the repository root, `pnpm rivet --help` or `node packages/cli/src/cli.mjs --help` runs the same CLI without installation. Run `node --test packages/cli/test/*.test.mjs` for credential handling, project detection, proof tampering and independent recovery. The package smoke test packs an archive, installs it offline into a temporary global prefix, invokes the generated command, and runs saved login, project backup/status and encrypted restore after removing the source project. Network responses use fixtures; no real token or treasury spend is involved.
 
-`pnpm cli:pack` builds the self-contained CKB runtime and npm archive. `node packages/cli/scripts/build-native.mjs` builds the current platform's standalone executable with Node's single-executable facility and pinned `postject`. Release builds run on Linux, macOS and Windows, and publish artifacts only after every build and smoke test succeeds. Local Linux success does not constitute macOS/Windows release acceptance. Publication and live acceptance are tracked in the [Milestone 2 plan](https://github.com/jedi-dtechmaker/Rivet/blob/cli-v0.1.0-rc.2/docs/MILESTONE_TWO_PLAN.md).
+`pnpm cli:pack` builds the self-contained CKB runtime and npm archive. `node packages/cli/scripts/build-native.mjs` builds the current platform's standalone executable with Node's single-executable facility and pinned `postject`. Release builds run on Linux, macOS and Windows, and publish artifacts only after every build and smoke test succeeds. Local Linux success does not constitute macOS/Windows release acceptance. The repository includes the completed [Milestone 2 plan](../../docs/MILESTONE_TWO_PLAN.md) and platform/live acceptance records.

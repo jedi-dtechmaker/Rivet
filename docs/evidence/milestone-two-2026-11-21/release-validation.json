@@ -1,0 +1,18 @@
+{
+  "commit": "f5a52a8215b7684287de6f5376f28f75bff1b628",
+  "workflow": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44851633570",
+  "result": "success",
+  "platforms": [
+    "Linux x64",
+    "macOS arm64",
+    "Windows x64"
+  ],
+  "published": true,
+  "tag": "cli-v0.1.0-rc.3",
+  "release": "https://github.com/jedi-dtechmaker/Rivet/releases/tag/cli-v0.1.0-rc.3",
+  "tagChecks": {
+    "workflow": "https://github.com/jedi-dtechmaker/Rivet/actions/runs/44851633573",
+    "result": "success"
+  },
+  "securityPullRequest": "https://github.com/jedi-dtechmaker/Rivet/pull/3"
+}

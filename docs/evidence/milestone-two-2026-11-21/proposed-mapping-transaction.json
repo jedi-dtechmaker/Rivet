@@ -1,0 +1,32 @@
+{
+  "network": "ckb-testnet",
+  "mappingDigest": "0xb48332694b9924e211e1e309ab5eb0662b0d755e0d25a7f90ee5829827e7d792",
+  "transactionHash": "0x09e362fcb0c7c61e04a2d1266ce10cc9474a819b45b0224670171d2487251010",
+  "signed": false,
+  "broadcast": false,
+  "fundingSource": "Configured Rivet testnet treasury; approval required before signing or broadcasting",
+  "mappingCapacityCkb": "97.00000000",
+  "feeShannons": "500",
+  "feeCkb": "0.00000500",
+  "fundingInputs": [
+    {
+      "txHash": "0x707f7244eb11df3e8928a0d490dafee3d315220ffa0db575f03b508b654b9d65",
+      "index": 1,
+      "capacityCkb": "297099.99986838",
+      "outputData": "0x"
+    }
+  ],
+  "outputs": [
+    {
+      "index": 0,
+      "capacityCkb": "97.00000000",
+      "purpose": "Owner-locked mapping anchor"
+    },
+    {
+      "index": 1,
+      "capacityCkb": "297002.99986338",
+      "purpose": "Treasury change"
+    }
+  ],
+  "address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqf48wmymzu8dlyrfwg9h7zjk22fstwt0lg4my83z"
+}

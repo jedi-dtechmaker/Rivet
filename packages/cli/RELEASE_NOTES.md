@@ -8,6 +8,8 @@ Rivet CLI 0.1.0 is a CKB testnet preview for public GitHub history.
 
 Attribution requires Python 3 and git-filter-repo 2.47.0. Standalone executables include Node; npm installations require Node 24+. macOS binaries use ad-hoc signing and are not notarized; Windows binaries do not have a publisher certificate.
 
-The hosted server/worker rollout and live testnet acceptance remain pending. Saved login needs the new `/api/cli/account` route, and the worker changes require the additive worker-job schema and `/api/backup/job`. Read the CLI guide and worker runbook before rollout. This preview does not mark the grant milestone complete.
+Preview `cli-v0.1.0-rc.3` includes the dependency security fixes from PR #3. Its package/native checks and separate release checks pass on Linux, macOS and Windows. The merged production deployment and additive worker-job schema are live. All public package/executable checksums were independently verified.
 
-[CLI installation and usage guide](https://github.com/jedi-dtechmaker/Rivet/blob/cli-v0.1.0-rc.2/packages/cli/README.md).
+Milestone 2 project acceptance completed November 21, 2026 with two live v2 backups, exact recovery of every commit/ref, independently reproduced signed attribution mappings, a confirmed separate mapping anchor, and five negative checks. The public npm CLI passes live recovery, mapping-anchor verification and login/status/logout; the public Linux executable independently verifies the mapping and anchor. The repository contains the final acceptance record and checksummed public evidence directory. Community/reviewer sign-off remains separate.
+
+[CLI installation and usage guide](./README.md), [live acceptance record](../../docs/MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md), and [remaining Phase Two scope](../../docs/PHASE_TWO_PLAN.md).

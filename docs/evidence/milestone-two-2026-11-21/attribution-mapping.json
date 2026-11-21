@@ -1,0 +1,55 @@
+{
+  "payload": {
+    "protocol": "rivet-attribution-proof-v1",
+    "network": "ckb-testnet",
+    "source": {
+      "protocol": "rivet-backup-proof-v2",
+      "network": "ckb-testnet",
+      "repository": "jedi-dtechmaker/DEXsol-skannar",
+      "txHash": "0x8bb202bcf2bb9915f646ba2aa6bf4294a10da11a8eb892ff3daa434063d4d145",
+      "outputIndex": 0,
+      "merkleRoot": "0x024299f5ed015a0a01a27716879aa8704aa9bc60cb2353b74c4f323b349ab31d",
+      "refsHash": "0x94c65d076b1fe966c06effaa4054fd2412e83cd994063dfd80dffa0dd7cc2b82",
+      "bundleSha256": "0x9a687cce9b72f3852ced68c34816dee3194971d39537542bfeb0036396523f43",
+      "commitCount": 3,
+      "ipfsCid": "bafkreignrrv6pd5br7elfpborforw42akdzvbqiln5dg5jb4r3yk7nb3fm"
+    },
+    "emailMappings": [
+      {
+        "from": "mhizxplendour@gmail.com",
+        "to": "acceptance@rivet.example"
+      }
+    ],
+    "tool": {
+      "name": "git-filter-repo",
+      "version": "a40bce548d2c"
+    },
+    "commits": [
+      {
+        "old": "24bca7d7c2e056603f074a1ccf886d0302e289af",
+        "new": "d2dbaa54fa6f4ff0e572a19636914c17271061d7"
+      },
+      {
+        "old": "2b6e51f30b85d373327602cc630d1401454c9187",
+        "new": "80686d6b6aa4ddab6d57857c54f451f91da4940c"
+      },
+      {
+        "old": "66511d526ee857c9a66489179e1767afbd543a3c",
+        "new": "684a84526ea4375e3f6e7b81f40e18cc62382dfc"
+      }
+    ],
+    "rewritten": {
+      "refs": [
+        "refs/heads/main 80686d6b6aa4ddab6d57857c54f451f91da4940c",
+        "refs/heads/rivet-acceptance-20261121 d2dbaa54fa6f4ff0e572a19636914c17271061d7",
+        "refs/tags/rivet-acceptance-20261121 d454326986bc2214e508b0512edb448645a1488c"
+      ],
+      "refsHash": "0x04a28f09669274a7e46f80f498d3345335ff494945a211be50bf9c18012b30e1",
+      "commitCount": 3
+    },
+    "ownerPublicKey": "MCowBQYDK2VwAyEAlCmtD7jsjg/RnAGNnYcdlPcM8fQRkQfItobmGHRPdTE=",
+    "ownerKeyId": "0x4bd3634d95988d3e07061a4be22097a7e4dae5f238e0791c974fedc02dbd83a8",
+    "signatureEffects": "Rewritten commit IDs change. Original commit and tag signatures are removed by git-filter-repo; original.git preserves the exact signed objects."
+  },
+  "signature": "gN23/wCZb0BmtnYtdPK5EW7g4Aa1MNzdVxRun6V47B/x9qlxCkQgXf8gcbN2J0wY7enOfiFwB5Ll5aRSnLPbBQ=="
+}

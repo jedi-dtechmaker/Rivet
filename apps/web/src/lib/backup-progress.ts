@@ -10,6 +10,7 @@ export const BACKUP_STAGES = {
 } as const;
 
 export function backupProgress(state: string, progress: number) {
+  if (state === 'unchanged') return { percent: 100, label: 'Already backed up; no changes' };
   if (state === 'completed') return { percent: 100, label: 'Backup complete' };
   if (state === 'failed') return { percent: Math.min(progress || 0, 90), label: 'Backup interrupted' };
   const percent = state === 'prepared' ? 90 : Math.max(0, Math.min(progress || 0, 90));

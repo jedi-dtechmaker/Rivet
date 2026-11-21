@@ -119,6 +119,23 @@ test('backup can export a recovery file, status never prints keys, and existing 
   await assert.rejects(main(['restore', 'Owner/project'], { ...ctx, request: async () => Response.json({ status: 'pending' }) }), /No confirmed backup/);
 }));
 
+test('backup waits on its own job and accepts an unchanged confirmed snapshot without a new transaction', () => withTemp(async directory => {
+  const ctx = context(directory); await login(ctx);
+  let polls = 0;
+  const request = async url => {
+    if (url.pathname.endsWith('/backup')) return Response.json({ accepted: true, jobId: 'unchanged-job',
+      startedAt: '2026-11-21T12:00:00Z', previousTxHash: proof.txHash });
+    polls++; assert.equal(url.searchParams.get('jobId'), 'unchanged-job');
+    return Response.json({ status: 'confirmed', unchanged: true, proof });
+  };
+  await main(['backup', 'Owner/project', '--proof-out', 'unchanged.secret.json'], { ...ctx, request });
+  assert.equal(polls, 1);
+  assert.deepEqual(JSON.parse(await readFile(join(directory, 'unchanged.secret.json'), 'utf8')), proof);
+  const result = JSON.parse(ctx.logs.at(-1));
+  assert.equal(result.unchanged, true); assert.equal(result.proof.txHash, proof.txHash);
+  assert.doesNotMatch(ctx.logs.join('\n'), /encryptionKey|encryptionIv/);
+}));
+
 test('hidden token prompt suppresses input, cancels cleanly, and bounded piped input rejects malformed tokens', async () => {
   const input = new PassThrough(); input.isTTY = true; input.setRawMode = () => {};
   const messages = [];

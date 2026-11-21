@@ -1,0 +1,15 @@
+{
+  "candidateCommit": "f5a52a8215b7684287de6f5376f28f75bff1b628",
+  "installedOutsideCheckout": true,
+  "sourceMirrorUnavailableAtOriginalPath": true,
+  "savedLoginUsed": false,
+  "commitsMatch": true,
+  "refsMatch": true,
+  "commitCount": 3,
+  "refs": 3,
+  "networkOrigins": [
+    "https://gateway.pinata.cloud",
+    "https://ipfs.io",
+    "https://testnet.ckb.dev"
+  ]
+}

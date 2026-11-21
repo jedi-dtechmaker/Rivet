@@ -9,7 +9,7 @@ The current package is a CLI. A separately importable Rivet SDK has not been imp
 On any computer with Node 24+ and Git installed, install the published preview directly:
 
 ```sh
-npm install --global https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.2/rivet-cli-0.1.0.tgz
+npm install --global https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.3/rivet-cli-0.1.0.tgz
 rivet --version
 rivet --help
 ```
@@ -51,7 +51,7 @@ Expect one passing end-to-end test. On another machine, install git-filter-repo 
 
 ## Test a real repository on the hosted server
 
-The merged backend is deployed at `https://rivet-web-ten.vercel.app`. On November 20, 2026, the additive worker-job schema was applied and independently checked against the verified live database; existing account, repository and worker-job counts were preserved. The published CLI successfully logged in, retrieved an existing confirmed backup and logged out using an isolated temporary configuration. Release CI passed on Linux, macOS and Windows. A new live backup, exact/attribution restore and mapping-anchor demonstration are still required for Milestone 2 acceptance.
+The merged backend is deployed at `https://rivet-web-ten.vercel.app`. The additive worker-job schema was applied and checked on November 20, 2026; existing account, repository and worker-job counts were preserved. Milestone 2 live acceptance completed on November 21: two v2 backups, independent exact/attribution recovery, signed mapping/anchor verification, and five negative checks pass. Security PR #3 is deployed. Public `cli-v0.1.0-rc.3` passed Linux/macOS/Windows CI, all public download checksums, and Linux live recovery and login/status/logout checks. The repository's [acceptance record](./MILESTONE_TWO_LIVE_ACCEPTANCE_2026-11-21.md) and [evidence directory](./evidence/milestone-two-2026-11-21/) contain the results and reproduction material.
 
 The developer's computer can be off: Vercel serves the API and GitHub Actions runs the hosted backup worker. The user runs the installed CLI on their own computer.
 
@@ -71,4 +71,4 @@ git clone /new/location/recovered.git /new/location/working-copy
 
 Login prompts for a GitHub personal access token without echoing it. The backup should report a confirmed CKB transaction, IPFS CID and block height; verification should return `valid: true`. Compare `git rev-list --all | sort` and `git for-each-ref --format='%(refname) %(objectname)'` in the source and recovered mirror while keeping the source unchanged. Both lists should match for exact restore. Recovering after logout demonstrates that the exported proof does not depend on a saved Rivet login.
 
-Recovery files contain private decryption material: keep them outside version control. Backups include pushed public GitHub history; local-only commits and uncommitted files require pushing first. The [CLI guide](../packages/cli/README.md#attribution-restore) covers manual attribution and mapping-anchor verification. Real backups and mapping anchors spend test CKB and belong to the remaining live acceptance run.
+Recovery files contain private decryption material: keep them outside version control. Backups include pushed public GitHub history; local-only commits and uncommitted files require pushing first. The [CLI guide](../packages/cli/README.md#attribution-restore) covers manual attribution and mapping-anchor verification. Real backups and mapping anchors spend test CKB; the completed acceptance record identifies the approved transactions so reviewers can verify them without creating new anchors.

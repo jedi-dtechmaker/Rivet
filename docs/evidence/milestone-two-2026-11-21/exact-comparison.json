@@ -1,0 +1,10 @@
+{
+  "exactCommitsMatch": true,
+  "exactRefsMatch": true,
+  "commitCount": 3,
+  "refCount": 3,
+  "gitFsckPassed": true,
+  "sourceGitHubAccess": "blocked for CLI fetch and Git network protocols",
+  "rivetAccess": "blocked for CLI fetch; unavailable origin configured",
+  "savedLoginUsed": false
+}

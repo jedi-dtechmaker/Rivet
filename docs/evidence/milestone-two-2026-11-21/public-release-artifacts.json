@@ -1,0 +1,41 @@
+{
+  "verifiedAt": "2026-11-21T02:05:40.998Z",
+  "releaseId": 453361867,
+  "tag": "cli-v0.1.0-rc.3",
+  "url": "https://github.com/jedi-dtechmaker/Rivet/releases/tag/cli-v0.1.0-rc.3",
+  "publishedAt": "2026-11-21T01:43:40Z",
+  "assets": [
+    {
+      "name": "rivet-cli-0.1.0.tgz",
+      "bytes": 591971,
+      "sha256": "301028f135be4cd10f5df31a69e386fecc30ff546f94d7b85f92e41adbd3ba0b",
+      "matchesPublishedChecksum": true,
+      "matchesGitHubDigest": true,
+      "url": "https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.3/rivet-cli-0.1.0.tgz"
+    },
+    {
+      "name": "rivet-v0.1.0-linux-x64",
+      "bytes": 129699008,
+      "sha256": "259c28e55fc5e4ec5c1c347a5df317d2ca4da041f90533cb3a131ff2ba3b49a3",
+      "matchesPublishedChecksum": true,
+      "matchesGitHubDigest": true,
+      "url": "https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.3/rivet-v0.1.0-linux-x64"
+    },
+    {
+      "name": "rivet-v0.1.0-darwin-arm64",
+      "bytes": 124391680,
+      "sha256": "6208881fc1cd5b0d382444660789056e1797016d1739129cf9c2d8da6701d0c8",
+      "matchesPublishedChecksum": true,
+      "matchesGitHubDigest": true,
+      "url": "https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.3/rivet-v0.1.0-darwin-arm64"
+    },
+    {
+      "name": "rivet-v0.1.0-win32-x64.exe",
+      "bytes": 96814592,
+      "sha256": "caa689780b913a273cf2a2c9cc4ffa914043a2674ad38ea8eac5566d46928724",
+      "matchesPublishedChecksum": true,
+      "matchesGitHubDigest": true,
+      "url": "https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.3/rivet-v0.1.0-win32-x64.exe"
+    }
+  ]
+}

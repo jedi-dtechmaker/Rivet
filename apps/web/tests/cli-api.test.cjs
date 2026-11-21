@@ -6,6 +6,7 @@ const { GET } = require('../src/app/api/cli/status/route.ts');
 const { POST } = require('../src/app/api/cli/backup/route.ts');
 const { encodeBackupAnchor } = require('../../../packages/cli/src/anchor.mjs');
 const { GET: accountGET } = require('../src/app/api/cli/account/route.ts');
+const { backupFixture } = require('./fixtures/backup-job.cjs');
 test('CLI requires a GitHub bearer identity and never falls back to a browser account', async () => {
   assert.equal((await GET(new Request('https://rivet.example/api/cli/status?repo=owner/repo'))).status, 401);
   assert.equal((await POST(new Request('https://rivet.example/api/cli/backup', { method: 'POST', body: '{}' }))).status, 401);
@@ -65,4 +66,37 @@ test('CLI recovery keys are opt-in and scoped to the authenticated repository ow
       commitCount: 3, ipfsCid: `bafy${'a'.repeat(40)}` });
     assert.equal((await GET(request(''))).status, 503);
   } finally { prisma.user.findUnique = originalUser; prisma.repository.findFirst = originalRepo; mock.restoreAll(); }
+});
+
+test('CLI job polling returns the reused snapshot even after a later backup, without exposing recovery keys by default', async () => {
+  const fixture = backupFixture(), originalUser = prisma.user.findUnique, originalRepo = prisma.repository.findFirst;
+  const originalJob = prisma.workerDispatch.findFirst;
+  let state = 'unchanged', exists = true;
+  mock.method(globalThis, 'fetch', async () => ({ ok: true, json: async () => ({ id: 1001 }) }));
+  prisma.user.findUnique = async () => ({ id: 'owner', githubId: '1001' });
+  prisma.repository.findFirst = async () => ({ fullName: 'owner/repo', isBackedUp: true, ckbTxHash: `0x${'99'.repeat(32)}`,
+    ckbCellOutpoint: `0x${'99'.repeat(32)}:0`, lastBackupCid: 'newer-cid', commitCount: 3, updatedAt: new Date('2026-11-20T00:00:00Z') });
+  prisma.workerDispatch.findFirst = async ({ where }) => {
+    assert.deepEqual(where, { id: 'selected-job', userId: 'owner', repository: 'owner/repo', kind: 'backup' });
+    return exists ? { state, checkpoint: { ...fixture.saved, unchanged: true } } : null;
+  };
+  mock.method(ccc.Client.prototype, 'getTransaction', async hash => {
+    assert.equal(hash, fixture.saved.txHash); return { status: 'committed', transaction: fixture.transaction, blockHash: hash };
+  });
+  mock.method(ccc.Client.prototype, 'getHeaderByHash', async () => ({ number: 42n }));
+  const request = suffix => new Request(`https://rivet.example/api/cli/status?repo=owner/repo&jobId=selected-job&since=2026-11-21T00:00:00Z${suffix}`, {
+    headers: { Authorization: 'Bearer test-token' },
+  });
+  try {
+    const response = await GET(request('')), result = await response.json();
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(result.status, 'confirmed'); assert.equal(result.unchanged, true); assert.equal(result.proof.txHash, fixture.saved.txHash);
+    assert.equal(result.proof.encryptionKey, undefined);
+    assert.equal((await (await GET(request('&includeSecrets=true'))).json()).proof.encryptionKey, fixture.saved.result.encryptionKey);
+    state = 'queued'; assert.equal((await (await GET(request(''))).json()).status, 'pending');
+    state = 'failed'; assert.equal((await (await GET(request(''))).json()).status, 'failed');
+    exists = false; assert.equal((await GET(request('&includeSecrets=true'))).status, 404);
+  } finally {
+    prisma.user.findUnique = originalUser; prisma.repository.findFirst = originalRepo; prisma.workerDispatch.findFirst = originalJob; mock.restoreAll();
+  }
 });

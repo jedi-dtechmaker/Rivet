@@ -1,0 +1,20 @@
+{
+  "valid": true,
+  "network": "ckb-testnet",
+  "anchorVersion": 2,
+  "blockHeight": "23131379",
+  "blockHash": "0x844d8b36922fc83f85f5ea12ba10a0cce989514bca571b46f60cbc9eb3abf16e",
+  "commitCount": 3,
+  "merkleRoot": "0x024299f5ed015a0a01a27716879aa8704aa9bc60cb2353b74c4f323b349ab31d",
+  "refs": [
+    "refs/heads/main 2b6e51f30b85d373327602cc630d1401454c9187",
+    "refs/heads/rivet-acceptance-20261121 24bca7d7c2e056603f074a1ccf886d0302e289af",
+    "refs/tags/rivet-acceptance-20261121 3dfada19e4407c07032fe6bd46ecbb68238b68b2"
+  ],
+  "refsHash": "0x94c65d076b1fe966c06effaa4054fd2412e83cd994063dfd80dffa0dd7cc2b82",
+  "bundleSha256": "0x9a687cce9b72f3852ced68c34816dee3194971d39537542bfeb0036396523f43",
+  "limitations": [],
+  "restored": "/tmp/rivet-m2-dexsol.uk3gkm/exact-recovery.git",
+  "bare": true,
+  "nextStep": "Use git clone <restored-path> <new-working-directory> to get working files."
+}
