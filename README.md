@@ -136,6 +136,7 @@ Rivet/
 |---|---|
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, component design, technology choices |
 | [PHASES.md](docs/PHASES.md) | Detailed development phases with milestones and deliverables |
+| [Milestone 2 delivery report](docs/PROGRESS_UPDATE_2026-11-21.md) | Community update, complete CLI workflow, live testnet results, and Phase One completion |
 | [CKB_INTEGRATION.md](docs/CKB_INTEGRATION.md) | How CKB, RGB++, CCC, and Fiber are integrated |
 | [DATA_MODELS.md](docs/DATA_MODELS.md) | On-chain Cell structures, database schemas, data flow |
 | [USER_FLOWS.md](docs/USER_FLOWS.md) | Step-by-step user journeys for every feature |
