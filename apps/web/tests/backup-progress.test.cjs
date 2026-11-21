@@ -50,6 +50,14 @@ test('an interrupted job reports failure rather than an endless loading spinner'
   assert.deepEqual(await (await status.GET(poll())).json(), { status: 'failed', percent: 40, label: 'Backup interrupted' });
 });
 
+test('an unchanged backup finishes with its existing proof and never exposes saved recovery keys', async () => {
+  model(prisma.workerDispatch, 'findFirst', async () => ({ state: 'unchanged', progress: 100,
+    checkpoint: { unchanged: true, txHash: 'existing-proof', result: { encryptionKey: 'private' } } }));
+  assert.deepEqual(await (await status.GET(poll())).json(), {
+    status: 'done', percent: 100, label: 'Already backed up; no changes', ckbTxHash: 'existing-proof', unchanged: true,
+  });
+});
+
 test('another account and unknown job IDs cannot read progress', async () => {
   const lookup = model(prisma.workerDispatch, 'findFirst', async () => null);
   assert.equal((await status.GET(poll())).status, 404);

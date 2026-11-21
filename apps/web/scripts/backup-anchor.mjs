@@ -1,6 +1,25 @@
 import { ccc } from '@ckb-ccc/core';
 import { parseBackupAnchor } from '../../../packages/cli/src/anchor.mjs';
 
+export async function findUnchangedBackup({ client, previousOutpoint, snapshot }) {
+  if (!previousOutpoint) return null;
+  const match = /^(0x[0-9a-f]{64}):(0|[1-9][0-9]*)$/i.exec(previousOutpoint);
+  if (!match || !Number.isSafeInteger(Number(match[2])) || Number(match[2]) > 0xffffffff) throw new Error('Invalid previous backup anchor outpoint.');
+  const txHash = match[1], index = Number(match[2]);
+  const previous = await client.getTransactionNoCache(txHash);
+  if (previous?.status !== 'committed' || previous.transaction.hash() !== txHash || !previous.transaction.outputs[index]) {
+    throw new Error('Previous backup anchor is not confirmed.');
+  }
+  const anchor = parseBackupAnchor(previous.transaction.outputsData[index]);
+  if (anchor.version !== 2 || anchor.merkleRoot !== snapshot.merkleRoot || anchor.refsHash !== snapshot.refsHash
+    || anchor.commitCount !== snapshot.commitCount) return null;
+  const live = await client.getCellLive(ccc.OutPoint.from({ txHash, index }), true, true);
+  if (!live || live.cellOutput.type || live.outputData !== previous.transaction.outputsData[index]) {
+    throw new Error('Previous backup anchor is not live. Reconcile its successor before another backup.');
+  }
+  return { txHash, ckbCellOutpoint: previousOutpoint, ipfsCid: anchor.ipfsCid, merkleRoot: anchor.merkleRoot, commitsProcessed: anchor.commitCount };
+}
+
 /** Build one successor anchor. A missing/uncertain predecessor never starts a second chain. */
 export async function createBackupAnchorTransaction({ client, lock, previousOutpoint, anchorData }) {
   parseBackupAnchor(anchorData);

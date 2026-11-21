@@ -10,7 +10,12 @@ export async function GET(request: Request) {
   if (!id || !repo) return NextResponse.json({ error: 'Missing job reference' }, { status: 400 });
   const job = await prisma.workerDispatch.findUnique({ where: { id } });
   if (!job || job.kind !== 'backup' || job.repository !== repo.toLowerCase()) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
-  return NextResponse.json({ state: job.state, previousOutpoint: job.previousOutpoint, checkpoint: job.checkpoint },
+  const current = await prisma.repository.findFirst({ where: { userId: job.userId, githubRepoId: { equals: repo, mode: 'insensitive' } } });
+  const canReuseSnapshot = Boolean(current?.isBackedUp && current.ckbCellOutpoint === job.previousOutpoint
+    && current.lastBackupCid && current.githubNumericId && /^[a-f0-9]{64}$/i.test(current.encryptionKey || '')
+    && /^[a-f0-9]{24}$/i.test(current.encryptionIv || ''));
+  return NextResponse.json({ state: job.state, previousOutpoint: job.previousOutpoint, checkpoint: job.checkpoint,
+    canReuseSnapshot, githubNumericId: current?.githubNumericId },
     { headers: { 'Cache-Control': 'private, no-store' } });
 }
 

@@ -88,7 +88,7 @@ test('PostgreSQL stage updates never regress progress, mutate checkpoints or reo
     await Promise.all(['uploading', 'cloning', 'confirming', 'bundling'].map(report));
     const job = await prisma.workerDispatch.findUniqueOrThrow({ where: { id } });
     assert.equal(job.progress, 90); assert.equal(job.state, 'queued'); assert.deepEqual(job.checkpoint, checkpoint);
-    for (const state of ['failed', 'completed']) {
+    for (const state of ['failed', 'completed', 'unchanged']) {
       await prisma.workerDispatch.update({ where: { id }, data: { state, progress: 25 } });
       assert.equal((await report('confirming')).status, 200);
       const terminal = await prisma.workerDispatch.findUniqueOrThrow({ where: { id } });
@@ -99,5 +99,47 @@ test('PostgreSQL stage updates never regress progress, mutate checkpoints or reo
     await prisma.user.delete({ where: { id: user.id } }); await prisma.$disconnect();
     if (previous === undefined) delete process.env.BACKUP_CALLBACK_SECRET;
     else process.env.BACKUP_CALLBACK_SECRET = previous;
+  }
+});
+
+test('PostgreSQL concurrent unchanged completions preserve the old snapshot and a later push still reserves new work', { skip: !process.env.RIVET_TEST_DATABASE_URL }, async () => {
+  process.env.DATABASE_URL = process.env.RIVET_TEST_DATABASE_URL;
+  const { mock } = require('node:test');
+  const { prisma } = require('../src/lib/db.ts');
+  const { ccc } = require('@ckb-ccc/core');
+  const { reserveWorkerDispatch } = require('../src/lib/worker-quota.ts');
+  const { completeUnchangedBackupJob } = require('../src/lib/backup-jobs.ts');
+  const { backupFixture } = require('./fixtures/backup-job.cjs');
+  const { parseBackupAnchor } = require('../../../packages/cli/src/anchor.mjs');
+  const fixture = backupFixture(), anchor = parseBackupAnchor(fixture.transaction.outputsData[0]);
+  const user = await prisma.user.create({ data: { githubId: `unchanged-${randomUUID()}` } });
+  const repository = `owner/unchanged-${randomUUID()}`, id = randomUUID();
+  mock.method(ccc.ClientPublicTestnet, 'new', () => ({
+    getTransactionNoCache: async () => ({ status: 'committed', transaction: fixture.transaction }),
+    getCellLive: async () => ccc.Cell.from({ outPoint: { txHash: fixture.saved.txHash, index: 0 },
+      cellOutput: fixture.transaction.outputs[0], outputData: fixture.transaction.outputsData[0] }),
+  }));
+  try {
+    const before = await prisma.repository.create({ data: { githubRepoId: repository, fullName: repository, name: repository.split('/')[1],
+      userId: user.id, githubNumericId: '1001', isBackedUp: true, ckbTxHash: fixture.saved.txHash, ckbCellOutpoint: fixture.saved.result.ckbCellOutpoint,
+      lastBackupCid: anchor.ipfsCid, commitCount: anchor.commitCount, encryptionKey: fixture.saved.result.encryptionKey, encryptionIv: fixture.saved.result.encryptionIv } });
+    await reserveWorkerDispatch(user.id, id, 'backup', { repository, deliveryId: `repeat:${id}` });
+    const snapshot = { merkleRoot: anchor.merkleRoot, refsHash: anchor.refsHash, commitCount: anchor.commitCount, githubNumericId: '1001' };
+    const completions = await Promise.all(Array.from({ length: 4 }, () => completeUnchangedBackupJob(id, repository, fixture.saved.txHash, snapshot)));
+    assert.equal(completions.filter(result => !result.replayed).length, 1);
+    const after = await prisma.repository.findUniqueOrThrow({ where: { githubRepoId: repository } });
+    assert.deepEqual(after, before);
+    assert.equal((await prisma.workerDispatch.findUniqueOrThrow({ where: { id } })).state, 'unchanged');
+    const replay = await reserveWorkerDispatch(user.id, randomUUID(), 'backup', { repository, deliveryId: `repeat:${id}` });
+    assert.equal(replay.existing.id, id);
+    const next = await reserveWorkerDispatch(user.id, randomUUID(), 'backup', { repository, deliveryId: `new-push:${id}` });
+    assert.equal(next.allowed, true); assert.equal(next.existing, undefined);
+    assert.equal(await prisma.workerDispatch.count({ where: { repository, state: 'queued' } }), 1);
+  } finally {
+    mock.restoreAll();
+    await prisma.backupDelivery.deleteMany({ where: { repository } });
+    await prisma.workerDispatch.deleteMany({ where: { userId: user.id } });
+    await prisma.repository.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } }); await prisma.$disconnect();
   }
 });

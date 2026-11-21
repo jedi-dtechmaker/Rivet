@@ -26,7 +26,7 @@ import crypto from 'node:crypto';
 import { PinataSDK } from 'pinata-web3';
 import { commitRoot } from '../../../packages/cli/src/proof.mjs';
 import { encodeBackupAnchor, refsCommitment, sha256 } from '../../../packages/cli/src/anchor.mjs';
-import { createBackupAnchorTransaction } from './backup-anchor.mjs';
+import { createBackupAnchorTransaction, findUnchangedBackup } from './backup-anchor.mjs';
 import { retryRead, responseError } from '../../../packages/cli/src/retry.mjs';
 import { submitSavedTransaction } from '../../../packages/cli/src/submission.mjs';
 import { createCkbClient } from '../../../packages/cli/src/ckb-client.mjs';
@@ -106,6 +106,10 @@ async function run() {
   }
   if (!JOB_ID || !CALLBACK_URL || !CALLBACK_SECRET) throw new Error('Missing durable backup job configuration.');
   const job = await jobRequest('GET');
+  if (job.state === 'unchanged') {
+    await report({ success: true, unchanged: true, ckbTxHash: job.checkpoint.txHash, snapshot: job.checkpoint.snapshot });
+    return;
+  }
   if (job.checkpoint) { await resume(job.checkpoint); return; }
   if (job.state !== 'queued') throw new Error('Backup job is not queued. Start a new backup.');
   if (!PINATA_JWT) throw new Error('Missing PINATA_JWT');
@@ -152,6 +156,19 @@ async function run() {
     const { stdout: refs } = await execFileAsync('git', ['for-each-ref', '--format=%(refname) %(objectname)'], { cwd: tmpDir, maxBuffer: 64 * 1024 * 1024 });
     const refsHash = refsCommitment(refs.trim().split('\n'));
     console.log(`[worker] Merkle root ${merkleRoot} over ${commitHashes.length} commits`);
+
+    if (job.canReuseSnapshot && job.githubNumericId === githubNumericId) {
+      const snapshot = { merkleRoot, refsHash, commitCount: commitHashes.length, githubNumericId };
+      const { ccc } = await import('@ckb-ccc/core');
+      const client = createCkbClient(ccc, process.env.CKB_TESTNET_RPC_URL || 'https://testnet.ckb.dev/');
+      if ((await client.requestor.request('get_blockchain_info', [])).chain !== 'ckb_testnet') throw new Error('Backup anchoring requires CKB testnet.');
+      const unchanged = await findUnchangedBackup({ client, previousOutpoint: job.previousOutpoint, snapshot });
+      if (unchanged) {
+        await report({ success: true, unchanged: true, ckbTxHash: unchanged.txHash, snapshot });
+        console.log(`[worker] History and refs are unchanged; reusing ${unchanged.txHash} without another upload or transaction.`);
+        return;
+      }
+    }
 
     await progress('bundling');
     console.log('[worker] Creating bundle ...');

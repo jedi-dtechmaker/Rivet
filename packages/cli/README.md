@@ -58,6 +58,8 @@ Rivet detects `owner/repository` from the project's `origin` remote, including H
 
 `backup` waits up to 900 seconds for a newly completed, confirmed backup, then prints its CKB transaction hash, IPFS CID and block height. It checks the dispatch time and previous transaction to avoid returning an older backup. Use `--timeout 1800` or `--no-wait` when appropriate. After a timeout, use `status` instead of dispatching again.
 
+With the matching server and worker update, unchanged v2 history and refs reuse the existing confirmed, live backup without another bundle upload or CKB transaction. The CLI reports `unchanged: true` and can export that backup's existing recovery material. A worker still checks GitHub history and counts against the worker quota. Changed refs, including branch or tag changes with no new commits, create a new snapshot; legacy anchors need a new v2 backup. This behavior requires a CLI built from this source together with the updated server and worker; previously published preview binaries do not include job-aware waiting.
+
 To save an independent recovery file outside the project:
 
 ```sh
