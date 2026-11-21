@@ -1,0 +1,206 @@
+diff --git a/lib/ecpair.d.ts b/lib/ecpair.d.ts
+index 806d894c61ea702f12fda1b4abfb8b3093c159b9..17186e9e22463264432d021826527494e9c5bb4c 100644
+--- a/lib/ecpair.d.ts
++++ b/lib/ecpair.d.ts
+@@ -1,10 +1,9 @@
+ /// <reference types="node" />
+-import elliptic from 'elliptic';
+ export interface Options {
+     compressed?: boolean;
+ }
+ declare class ECPair {
+-    protected key: elliptic.ec.KeyPair;
++    protected key: Uint8Array;
+     compressed: boolean;
+     constructor(sk: Uint8Array | string, { compressed }?: Options);
+     get privateKey(): string;
+diff --git a/lib/ecpair.js b/lib/ecpair.js
+index d117ac15fd3fda7ef1b5d52c60ff8e4a675e6963..b2696ffa9c355e04cdc2fe0095fac06b5e15c1b8 100644
+--- a/lib/ecpair.js
++++ b/lib/ecpair.js
+@@ -1,10 +1,9 @@
+ "use strict";
+ Object.defineProperty(exports, "__esModule", { value: true });
+-const tslib_1 = require("tslib");
+-const elliptic_1 = (0, tslib_1.__importDefault)(require("elliptic"));
++const { secp256k1 } = require("@noble/curves/secp256k1.js");
++const { bytesToHex } = require("@noble/curves/utils.js");
+ const index_js_1 = require("./convertors/index.js");
+ const index_js_2 = require("./exceptions/index.js");
+-const ec = new elliptic_1.default.ec('secp256k1');
+ class ECPair {
+     constructor(sk, { compressed = true } = {
+         compressed: true,
+@@ -14,37 +13,34 @@ class ECPair {
+             if (enc === 'hex') {
+                 return this.privateKey;
+             }
+-            return this.key.getPrivate(enc);
++            throw new TypeError('Private keys must use hex encoding');
+         };
+         this.getPublicKey = (enc) => {
+             if (enc === 'hex') {
+                 return this.publicKey;
+             }
+-            return this.key.getPublic(this.compressed, enc);
++            return Array.from(secp256k1.getPublicKey(this.key, this.compressed));
+         };
+         this.sign = (message) => {
+             const msg = typeof message === 'string' ? (0, index_js_1.hexToBytes)(message) : message;
+-            return `0x${this.key
+-                .sign(msg, {
+-                canonical: true,
+-            })
+-                .toDER('hex')}`;
++            return `0x${bytesToHex(secp256k1.sign(msg, this.key, {
++                prehash: false, lowS: true, format: 'der',
++            }))}`;
+         };
+         this.verify = (message, sig) => {
+             const msg = typeof message === 'string' ? (0, index_js_1.hexToBytes)(message) : message;
+             const signature = typeof sig === 'string' ? (0, index_js_1.hexToBytes)(sig) : sig;
+-            return this.key.verify(msg, signature);
++            return secp256k1.verify(signature, msg, secp256k1.getPublicKey(this.key), {
++                prehash: false, lowS: false, format: 'der',
++            });
+         };
+         this.signRecoverable = (message) => {
+             const msg = typeof message === 'string' ? (0, index_js_1.hexToBytes)(message) : message;
+-            const { r, s, recoveryParam } = this.key.sign(msg, {
+-                canonical: true,
++            const signature = secp256k1.sign(msg, this.key, {
++                prehash: false, lowS: true, format: 'recovered',
+             });
+-            if (recoveryParam === null)
+-                throw new index_js_2.SignMessageException();
+-            const fmtR = r.toString(16).padStart(64, '0');
+-            const fmtS = s.toString(16).padStart(64, '0');
+-            return `0x${fmtR}${fmtS}0${recoveryParam}`;
++            // Noble prefixes the recovery byte; CKB appends it to compact r || s.
++            return `0x${bytesToHex(signature.subarray(1))}${signature[0].toString(16).padStart(2, '0')}`;
+         };
+         if (sk === undefined)
+             throw new index_js_2.ParameterRequiredException('Private key');
+@@ -57,14 +53,17 @@ class ECPair {
+         if (typeof sk === 'object' && sk.byteLength !== 32) {
+             throw new index_js_2.PrivateKeyLenException();
+         }
+-        this.key = ec.keyFromPrivate(typeof sk === 'string' ? sk.replace(/^0x/, '') : sk);
++        this.key = Uint8Array.from(typeof sk === 'string' ? (0, index_js_1.hexToBytes)(sk) : sk);
++        if (!secp256k1.utils.isValidSecretKey(this.key)) {
++            throw new RangeError('Invalid secp256k1 private key');
++        }
+         this.compressed = compressed;
+     }
+     get privateKey() {
+-        return `0x${this.key.getPrivate('hex').padStart(64, '0')}`;
++        return `0x${bytesToHex(this.key)}`;
+     }
+     get publicKey() {
+-        return `0x${this.key.getPublic(this.compressed, 'hex')}`;
++        return `0x${bytesToHex(secp256k1.getPublicKey(this.key, this.compressed))}`;
+     }
+ }
+ exports.default = ECPair;
+diff --git a/lib-esm/ecpair.d.ts b/lib-esm/ecpair.d.ts
+index 806d894c61ea702f12fda1b4abfb8b3093c159b9..17186e9e22463264432d021826527494e9c5bb4c 100644
+--- a/lib-esm/ecpair.d.ts
++++ b/lib-esm/ecpair.d.ts
+@@ -1,10 +1,9 @@
+ /// <reference types="node" />
+-import elliptic from 'elliptic';
+ export interface Options {
+     compressed?: boolean;
+ }
+ declare class ECPair {
+-    protected key: elliptic.ec.KeyPair;
++    protected key: Uint8Array;
+     compressed: boolean;
+     constructor(sk: Uint8Array | string, { compressed }?: Options);
+     get privateKey(): string;
+diff --git a/lib-esm/ecpair.js b/lib-esm/ecpair.js
+index 4ef4142ab6e44c61e612ebf0ea4bd0ccaf893bfc..c433b7743eba76cf0f60e14e6451841db15b84b8 100644
+--- a/lib-esm/ecpair.js
++++ b/lib-esm/ecpair.js
+@@ -1,7 +1,7 @@
+-import elliptic from 'elliptic';
++import { secp256k1 } from '@noble/curves/secp256k1.js';
++import { bytesToHex } from '@noble/curves/utils.js';
+ import { hexToBytes } from './convertors/index.js';
+-import { HexStringWithout0xException, ParameterRequiredException, PrivateKeyLenException, SignMessageException, } from './exceptions/index.js';
+-const ec = new elliptic.ec('secp256k1');
++import { HexStringWithout0xException, ParameterRequiredException, PrivateKeyLenException, } from './exceptions/index.js';
+ class ECPair {
+     constructor(sk, { compressed = true } = {
+         compressed: true,
+@@ -11,37 +11,34 @@ class ECPair {
+             if (enc === 'hex') {
+                 return this.privateKey;
+             }
+-            return this.key.getPrivate(enc);
++            throw new TypeError('Private keys must use hex encoding');
+         };
+         this.getPublicKey = (enc) => {
+             if (enc === 'hex') {
+                 return this.publicKey;
+             }
+-            return this.key.getPublic(this.compressed, enc);
++            return Array.from(secp256k1.getPublicKey(this.key, this.compressed));
+         };
+         this.sign = (message) => {
+             const msg = typeof message === 'string' ? hexToBytes(message) : message;
+-            return `0x${this.key
+-                .sign(msg, {
+-                canonical: true,
+-            })
+-                .toDER('hex')}`;
++            return `0x${bytesToHex(secp256k1.sign(msg, this.key, {
++                prehash: false, lowS: true, format: 'der',
++            }))}`;
+         };
+         this.verify = (message, sig) => {
+             const msg = typeof message === 'string' ? hexToBytes(message) : message;
+             const signature = typeof sig === 'string' ? hexToBytes(sig) : sig;
+-            return this.key.verify(msg, signature);
++            return secp256k1.verify(signature, msg, secp256k1.getPublicKey(this.key), {
++                prehash: false, lowS: false, format: 'der',
++            });
+         };
+         this.signRecoverable = (message) => {
+             const msg = typeof message === 'string' ? hexToBytes(message) : message;
+-            const { r, s, recoveryParam } = this.key.sign(msg, {
+-                canonical: true,
++            const signature = secp256k1.sign(msg, this.key, {
++                prehash: false, lowS: true, format: 'recovered',
+             });
+-            if (recoveryParam === null)
+-                throw new SignMessageException();
+-            const fmtR = r.toString(16).padStart(64, '0');
+-            const fmtS = s.toString(16).padStart(64, '0');
+-            return `0x${fmtR}${fmtS}0${recoveryParam}`;
++            // Noble prefixes the recovery byte; CKB appends it to compact r || s.
++            return `0x${bytesToHex(signature.subarray(1))}${signature[0].toString(16).padStart(2, '0')}`;
+         };
+         if (sk === undefined)
+             throw new ParameterRequiredException('Private key');
+@@ -54,14 +51,17 @@ class ECPair {
+         if (typeof sk === 'object' && sk.byteLength !== 32) {
+             throw new PrivateKeyLenException();
+         }
+-        this.key = ec.keyFromPrivate(typeof sk === 'string' ? sk.replace(/^0x/, '') : sk);
++        this.key = Uint8Array.from(typeof sk === 'string' ? hexToBytes(sk) : sk);
++        if (!secp256k1.utils.isValidSecretKey(this.key)) {
++            throw new RangeError('Invalid secp256k1 private key');
++        }
+         this.compressed = compressed;
+     }
+     get privateKey() {
+-        return `0x${this.key.getPrivate('hex').padStart(64, '0')}`;
++        return `0x${bytesToHex(this.key)}`;
+     }
+     get publicKey() {
+-        return `0x${this.key.getPublic(this.compressed, 'hex')}`;
++        return `0x${bytesToHex(secp256k1.getPublicKey(this.key, this.compressed))}`;
+     }
+ }
+ export default ECPair;
