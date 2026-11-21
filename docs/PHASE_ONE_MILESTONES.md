@@ -1,5 +1,7 @@
 # Rivet Phase One: Proposal Milestone Checklist
 
+> Worker hosting update — November 20, 2026: the owner chose to continue with the existing GitHub Actions workers temporarily. Backup and restore workflows were re-enabled. Their run history remains public until workers move to a VPS or managed worker host. The progress fix is on `fix/private-workers-and-progress`; no private worker repository is required. See [WORKER_SETUP.md](WORKER_SETUP.md).
+
 Source: [Funded proposal and discussion](https://talk.nervos.org/t/dis-rivet-decentralized-github-backup-timestamping-and-restore-on-ckb/10739).
 
 This checklist tracks the funded Phase One proposal. Use `[ ]` for pending work and `[x]` after completion and verification. Record evidence in the completion log.
@@ -88,7 +90,7 @@ This status update records the project owner's completed live checks; it does no
 
 Implementation update — November 18, 2026: the installable CLI now supports exact and attribution restore, independently verifiable owner-signed mappings, resumable testnet mapping anchors and pushed-ref monitoring. RPC/Auto Sync hardening includes durable signed worker checkpoints, repository/delivery deduplication and replay-safe completion. Nineteen CLI checks and 193 web checks pass; five optional deployed-script checks are skipped with PostgreSQL enabled. Linux native commands pass against local HTTP fixtures. Cross-platform publication and live acceptance remain below. The project owner deferred hosted deployment; no new live backup or transaction is claimed.
 
-- [ ] Release a cross-platform CLI binary for Linux, macOS, and Windows.
+- [x] Release a cross-platform CLI binary for Linux, macOS, and Windows. [Preview `cli-v0.1.0-rc.2`](https://github.com/jedi-dtechmaker/Rivet/releases/tag/cli-v0.1.0-rc.2) includes Linux x64, macOS arm64 and Windows x64 executables and checksums; all platform build and installed-workflow jobs passed.
 - [x] Implement `rivet backup <repo>` to trigger a hosted mirror backup and print the CKB transaction hash and IPFS CID. Installed-command/API tests use fixtures; live acceptance remains below. Without a repository argument, the CLI detects the GitHub origin.
 - [x] Implement `rivet status <repo>` to show the latest anchored proof and block height, with optional private recovery export. Source API and installed-command tests pass; live acceptance remains below.
 - [x] Implement `rivet verify <tx_hash>` to independently verify a proof against CKB and IPFS using an exported recovery file, with local encrypted-bundle recovery also supported. Legacy/v2 checks pass with RPC fixtures; live acceptance remains below.
@@ -104,12 +106,12 @@ Implementation update — November 18, 2026: the installable CLI now supports ex
 ### Hardening and documentation
 
 - [x] Add bounded retries for transient reads, preserve permanent RPC failures, and reconcile uncertain transaction submissions from saved signed bytes and hashes.
-- [x] Improve Auto Sync reliability with durable repository reservations, webhook-delivery deduplication, coalesced follow-up jobs, current-head reconciliation and callback replay protection. Refresh existing hook activation/secrets, handle pagination, and bound setup concurrency. PostgreSQL concurrency checks pass; hosted rollout remains pending.
-- [ ] Publish CLI documentation and a usage guide. Installation, saved token sign-in, project commands and independent recovery are documented in the package guide; public release publication remains pending.
+- [x] Improve Auto Sync reliability with durable repository reservations, webhook-delivery deduplication, coalesced follow-up jobs, current-head reconciliation and callback replay protection. Refresh existing hook activation/secrets, handle pagination, and bound setup concurrency. PostgreSQL concurrency checks pass; merged server/worker code and the additive live schema are deployed. Real worker acceptance remains pending.
+- [x] Publish CLI documentation and a usage guide. The published preview includes the installation, saved token sign-in, project commands and independent recovery guide.
 
 ### Acceptance
 
-- [ ] Publish the CLI for all three target platforms.
+- [x] Publish the CLI for all three target platforms. Public archive installation and checksum were independently verified. On November 20, 2026, the published CLI also passed live login, existing confirmed-backup status and logout after the merged deployment and additive database update.
 - [ ] Demonstrate the restore flow and verify its proofs on testnet.
 - [ ] Record release links, testnet transactions, and delivery evidence.
 - [ ] Mark Milestone 2 complete after its acceptance criteria pass.

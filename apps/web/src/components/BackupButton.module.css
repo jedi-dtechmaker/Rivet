@@ -2,3 +2,7 @@
 .progress { display: inline-flex; align-items: center; gap: 8px; color: var(--color-text-secondary); }
 .progress svg { flex-shrink: 0; }
 .note { font-size: var(--text-sm); color: var(--color-text-secondary); }
+
+.progressTrack { height: 5px; width: 100%; min-width: 160px; background: var(--color-border); border-radius: 4px; overflow: hidden; }
+.progressFill { height: 100%; background: var(--color-accent, #f97316); border-radius: inherit; transition: width 250ms ease; }
+@media (prefers-reduced-motion: reduce) { .progressFill { transition: none; } }

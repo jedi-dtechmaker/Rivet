@@ -217,8 +217,8 @@ export function Header() {
                       </button>
                     </>
                   )}
-                  <Link href="/dashboard#identity" className={styles.dropdown_item} onClick={() => setIsDropdownOpen(false)}>
-                    <Shield size={14} /> Manage Identity
+                  <Link href="/dashboard/identity" className={styles.dropdown_item} onClick={() => setIsDropdownOpen(false)}>
+                    <Shield size={14} /> Developer identity
                   </Link>
                   
                   <div style={{ borderTop: '1px solid var(--color-border)', margin: '4px 0' }}></div>

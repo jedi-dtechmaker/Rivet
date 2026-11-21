@@ -12,7 +12,6 @@ export function RestoreModalClient({ ipfsCid, repoName }: { ipfsCid: string, rep
   const [statusText, setStatusText] = useState('');
   const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
-  const [runUrl, setRunUrl] = useState<string | null>(null);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cancelledRef = useRef(false);
@@ -52,7 +51,6 @@ export function RestoreModalClient({ ipfsCid, repoName }: { ipfsCid: string, rep
         throw new Error(data.error || 'Failed to start the restore');
       }
 
-      if (data.runUrl) setRunUrl(data.runUrl);
       setStatusText('Restoring on GitHub Actions...');
 
       const targetRepoName: string = data.targetRepoName || `${repoName}-restored`;

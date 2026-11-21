@@ -4,6 +4,7 @@
 
 /* --- Color Palette --- */
 :root {
+  color-scheme: dark;
   /* Background layers (dark mode) */
   --color-bg-primary: #000000;
   --color-bg-secondary: #0a0a0a;
@@ -25,11 +26,16 @@
   --color-brand-gradient-text: linear-gradient(135deg, #ff5500 0%, #ff8800 100%);
 
   /* Text */
-  --color-text-primary: #f0f4fc;
-  --color-text-secondary: #94a3b8;
-  --color-text-tertiary: #64748b;
-  --color-text-muted: #475569;
-  --color-text-inverse: #0a0e1a;
+  --color-text-primary: #f4f4f5;
+  --color-text-secondary: #a1a1aa;
+  --color-text-tertiary: #85858f;
+  --color-text-muted: #65656e;
+  --color-text-inverse: #090909;
+  --color-primary: var(--color-brand-primary);
+  --color-text: var(--color-text-primary);
+  --color-text-dim: var(--color-text-secondary);
+  --color-danger: var(--color-error);
+  --color-danger-bg: var(--color-error-bg);
 
   /* Status */
   --color-success: #10b981;
@@ -89,12 +95,12 @@
   --space-32: 8rem;
 
   /* --- Borders & Radius --- */
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --radius-xl: 0;
-  --radius-2xl: 0;
-  --radius-full: 0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-full: 999px;
 
   /* --- Shadows --- */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -498,3 +504,6 @@ code, pre {
     padding: 0 var(--space-4);
   }
 }
+
+.skip-link { position: fixed; top: 8px; left: 16px; z-index: 600; padding: 12px 18px; background: var(--color-brand-primary); color: #090909; border-radius: 8px; transform: translateY(-160%); font-size: 14px; font-weight: 600; }
+.skip-link:focus { transform: translateY(0); color: #090909; }

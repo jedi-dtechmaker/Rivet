@@ -20,7 +20,7 @@ import { prisma } from '@/lib/db';
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 export type DispatchResult =
-  | { ok: true; jobId: string; runUrl: string; startedAt: string; coalesced?: boolean; dispatchUncertain?: boolean }
+  | { ok: true; jobId: string; startedAt: string; coalesced?: boolean; dispatchUncertain?: boolean }
   | { ok: false; status: number; error: string };
 
 export function isValidRepoFullName(value: unknown): value is string {
@@ -90,8 +90,7 @@ export async function dispatchWorkflow(opts: {
   try {
     const quota = await reserveWorkerDispatch(opts.userId, jobId, opts.kind, opts.backup);
     if (!quota.allowed) return { ok: false, status: 429, error: quota.error };
-    if (quota.existing) return { ok: true, jobId: quota.existing.id, startedAt: quota.existing.createdAt.toISOString(),
-      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}`, coalesced: true };
+    if (quota.existing) return { ok: true, jobId: quota.existing.id, startedAt: quota.existing.createdAt.toISOString(), coalesced: true };
   } catch {
     console.error('[dispatch] Worker budget storage is unavailable');
     return { ok: false, status: 503, error: 'Could not check the worker budget. Please retry shortly.' };
@@ -118,8 +117,7 @@ export async function dispatchWorkflow(opts: {
 
     // Success is 204 No Content.
     if (!res.ok) {
-      if (res.status >= 500) return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true,
-        runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}` };
+      if (res.status >= 500) return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true };
       // Only a definitive rejection releases the repository. A timeout or 5xx may have queued the workflow.
       if (res.status >= 400 && res.status < 500) {
         try { await prisma.workerDispatch.updateMany({ where: { id: jobId, state: 'queued' }, data: { state: 'failed' } }); }
@@ -142,13 +140,11 @@ export async function dispatchWorkflow(opts: {
     return {
       ok: true,
       jobId,
-      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}`,
       startedAt: new Date().toISOString(),
     };
   } catch (e: any) {
     console.error('[dispatch] GitHub dispatch response is uncertain; retaining job', jobId);
-    return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true,
-      runUrl: `https://github.com/${target.owner}/${target.name}/actions/workflows/${opts.workflowFile}` };
+    return { ok: true, jobId, startedAt: new Date().toISOString(), dispatchUncertain: true };
   }
 }
 

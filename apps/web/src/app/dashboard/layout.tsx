@@ -1,4 +1,3 @@
-import { ReactNode } from 'react';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -8,9 +7,9 @@ export default function DashboardLayout({
 }) {
   return (
     <div className={styles.layout}>
-      <main className={styles.main}>
+      <div className={styles.main}>
         {children}
-      </main>
+      </div>
     </div>
   );
 }

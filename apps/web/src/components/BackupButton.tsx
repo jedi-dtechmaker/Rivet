@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { LoaderCircle, ShieldCheck, ExternalLink } from 'lucide-react';
+import { LoaderCircle, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ActionDialog } from './ActionDialog';
 import styles from './BackupButton.module.css';
@@ -15,7 +15,7 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
   const [statusText, setStatusText] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [runUrl, setRunUrl] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const router = useRouter();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -44,8 +44,9 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
       setStatus('backing_up');
       setStatusText('Starting your backup…');
       setErrorMsg(null);
+      setProgress(0);
 
-      // 1. Dispatch the GitHub Actions worker. Returns immediately (202).
+      // Start the private background worker. Returns immediately (202).
       const res = await fetch('/api/backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,9 +59,9 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
       }
 
       const since = data.startedAt || new Date().toISOString();
-      if (data.runUrl) setRunUrl(data.runUrl);
+      const jobId = data.jobId;
 
-      setStatusText('Saving your repository…');
+      setStatusText('Waiting for a backup worker…');
 
       // 2. Poll until the worker reports back through /api/backup/callback.
       const startedAt = Date.now();
@@ -70,10 +71,21 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
 
         try {
           const s = await fetch(
-            `/api/backup/status?repoFullName=${encodeURIComponent(repoFullName)}&since=${encodeURIComponent(since)}`,
+            `/api/backup/status?repoFullName=${encodeURIComponent(repoFullName)}&since=${encodeURIComponent(since)}&jobId=${encodeURIComponent(jobId)}`,
             { cache: 'no-store' },
           );
           const sd = await s.json().catch(() => ({}));
+
+          if (!s.ok) throw new Error('Progress is temporarily unavailable.');
+          setProgress(current => Math.max(current, Number(sd.percent) || 0));
+          setStatusText(sd.label || 'Waiting for a backup worker…');
+
+          if (sd.status === 'failed') {
+            stopPolling();
+            setStatus('idle');
+            setErrorMsg('Your backup was interrupted before its proof was prepared. Please try again.');
+            return;
+          }
 
           if (sd.status === 'done') {
             stopPolling();
@@ -88,12 +100,11 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
             stopPolling();
             setStatus('idle');
             setErrorMsg(
-              'The backup is still running on GitHub Actions. Open the workflow run to check its progress.',
+              'Your backup is taking longer than expected. Check this repository again later; it may still complete.',
             );
             return;
           }
 
-          setStatusText('Saving your repository…');
         } catch {
           // Transient network error: keep polling.
         }
@@ -133,7 +144,10 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
     return (
       <div className={styles.result} aria-busy="true">
         <span className={styles.progress} role="status"><LoaderCircle size={16} className="spin" aria-hidden="true" />{statusText || 'Starting your backup…'}</span>
-        {runUrl && <a href={runUrl} target="_blank" rel="noreferrer">View progress ↗</a>}
+        <div className={styles.progressTrack} role="progressbar" aria-label="Estimated backup progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-valuetext={`${progress}% — ${statusText}`}>
+          <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+        </div>
+        <span className={styles.note}>{progress}% · Estimated from completed stages</span>
       </div>
     );
   }
@@ -157,7 +171,6 @@ export function BackupButton({ repoFullName, isPrivate = false, refresh = false 
       </ActionDialog>
       <ActionDialog open={!!errorMsg} onClose={() => setErrorMsg(null)} title="Your backup needs attention">
         <p role="alert">{errorMsg}</p>
-        {runUrl && <a href={runUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} aria-hidden="true" /> View backup progress</a>}
       </ActionDialog>
     </>
   );

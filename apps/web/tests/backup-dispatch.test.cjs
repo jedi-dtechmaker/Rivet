@@ -4,7 +4,7 @@ const { dispatchBackup, dispatchRestore } = require('../src/lib/backupDispatch.t
 const { prisma } = require('../src/lib/db.ts');
 
 const environmentNames = ['RIVET_REPO_OWNER', 'RIVET_REPO_NAME', 'RIVET_REPO_REF', 'NEXT_PUBLIC_APP_URL', 'GH_DISPATCH_TOKEN'];
-let savedEnvironment;
+let savedEnvironment, savedUpdateMany;
 
 beforeEach(() => {
   mock.method(prisma, '$transaction', async callback => callback({
@@ -19,10 +19,13 @@ beforeEach(() => {
   });
   delete process.env.GH_DISPATCH_TOKEN;
   mock.method(console, 'error', () => {});
+  savedUpdateMany = prisma.workerDispatch.updateMany;
+  prisma.workerDispatch.updateMany = mock.fn(async () => ({ count: 1 }));
 });
 
 afterEach(() => {
   mock.restoreAll();
+  prisma.workerDispatch.updateMany = savedUpdateMany;
   for (const name of environmentNames) {
     if (savedEnvironment[name] === undefined) delete process.env[name];
     else process.env[name] = savedEnvironment[name];
@@ -54,8 +57,10 @@ test('workers use the operator token and only restore receives the user credenti
     assert.ok(body.inputs.jobId);
     return new Response(null, { status: 204 });
   });
-  assert.equal((await dispatchBackup('user/source', 'user-id')).ok, true);
-  assert.equal((await restore()).ok, true);
+  for (const result of [await dispatchBackup('user/source', 'user-id'), await restore()]) {
+    assert.equal(result.ok, true);
+    assert.equal('runUrl' in result, false);
+  }
   assert.equal(fetch.mock.callCount(), 2);
 });
 

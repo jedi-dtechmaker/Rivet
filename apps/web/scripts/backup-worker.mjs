@@ -76,7 +76,19 @@ async function report(payload) {
   });
 }
 
+// Progress is best effort and cannot interrupt an otherwise recoverable backup.
+async function progress(stage) {
+  try {
+    const response = await fetch(new URL('/api/backup/job', CALLBACK_URL), {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-backup-secret': CALLBACK_SECRET },
+      body: JSON.stringify({ jobId: JOB_ID, repo: REPO_FULL_NAME, stage }), signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) console.warn('[worker] Progress update unavailable.');
+  } catch { console.warn('[worker] Progress update unavailable.'); }
+}
+
 async function resume(saved) {
+  await progress('confirming');
   const { ccc } = await import('@ckb-ccc/core');
   const client = createCkbClient(ccc, process.env.CKB_TESTNET_RPC_URL || 'https://testnet.ckb.dev/');
   if ((await client.requestor.request('get_blockchain_info', [])).chain !== 'ckb_testnet') throw new Error('Backup anchoring requires CKB testnet.');
@@ -117,10 +129,12 @@ async function run() {
   const bundlePath = path.join(os.tmpdir(), `rivet-${repoName}-${Date.now()}.bundle`);
 
   try {
+    await progress('cloning');
     console.log(`[worker] Cloning ${REPO_FULL_NAME} ...`);
     // execFile + arg array: no shell, so repo names cannot inject commands.
     await execFileAsync('git', ['clone', '--mirror', cloneUrl, tmpDir]);
 
+    await progress('history');
     console.log('[worker] Enumerating commits ...');
     const { stdout: commitLog } = await execFileAsync(
       'git',
@@ -139,9 +153,11 @@ async function run() {
     const refsHash = refsCommitment(refs.trim().split('\n'));
     console.log(`[worker] Merkle root ${merkleRoot} over ${commitHashes.length} commits`);
 
+    await progress('bundling');
     console.log('[worker] Creating bundle ...');
     await execFileAsync('git', ['bundle', 'create', bundlePath, '--all'], { cwd: tmpDir });
 
+    await progress('encrypting');
     console.log('[worker] Encrypting bundle ...');
     const fileBuffer = await fs.readFile(bundlePath);
     const bundleSha256 = sha256(fileBuffer);
@@ -157,6 +173,7 @@ async function run() {
       cipher.getAuthTag()
     ]);
     
+    await progress('uploading');
     console.log('[worker] Uploading encrypted bundle to IPFS ...');
     const blob = new Blob([encryptedBuffer]);
     const fileObj = new File([blob], `${repoName}.bundle`, {
@@ -168,6 +185,7 @@ async function run() {
     console.log(`[worker] IPFS CID ${ipfsCid}`);
 
     const anchorData = encodeBackupAnchor({ merkleRoot, refsHash, bundleSha256, commitCount: commitHashes.length, ipfsCid });
+    await progress('anchoring');
     console.log('[worker] Anchoring commits, refs, bundle bytes and CID on CKB ...');
     const { ccc } = await import('@ckb-ccc/core');
     const client = createCkbClient(ccc, process.env.CKB_TESTNET_RPC_URL || 'https://testnet.ckb.dev/');

@@ -1,8 +1,20 @@
 # Test the Rivet CLI yourself
 
+> Worker hosting update — November 20, 2026: the owner chose to continue with the existing GitHub Actions workers temporarily. Backup and restore workflows were re-enabled. Their run history remains public until workers move to a VPS or managed worker host. The progress fix is on `fix/private-workers-and-progress`; no private worker repository is required. See [WORKER_SETUP.md](WORKER_SETUP.md).
+
 The current package is a CLI. A separately importable Rivet SDK has not been implemented or published. Internal modules under `packages/cli/src` are implementation details, without a supported SDK API.
 
 ## Install and check the command
+
+On any computer with Node 24+ and Git installed, install the published preview directly:
+
+```sh
+npm install --global https://github.com/jedi-dtechmaker/Rivet/releases/download/cli-v0.1.0-rc.2/rivet-cli-0.1.0.tgz
+rivet --version
+rivet --help
+```
+
+This does not require cloning Rivet or copying files from the developer's computer. The release also includes standalone Linux x64, macOS arm64 and Windows x64 executables with checksums.
 
 On this Linux workstation, with Node 24+ and Git installed:
 
@@ -37,9 +49,11 @@ node --test packages/cli/test/package.test.mjs
 
 Expect one passing end-to-end test. On another machine, install git-filter-repo 2.47.0 and use that platform's executable path.
 
-## Test a real repository after the server rollout
+## Test a real repository on the hosted server
 
-The hosted Milestone 2 rollout is currently deferred. The default server needs the new account/job routes, additive worker schema and updated worker before this full flow can pass. A missing CLI account route means that server update is pending.
+The merged backend is deployed at `https://rivet-web-ten.vercel.app`. On November 20, 2026, the additive worker-job schema was applied and independently checked against the verified live database; existing account, repository and worker-job counts were preserved. The published CLI successfully logged in, retrieved an existing confirmed backup and logged out using an isolated temporary configuration. Release CI passed on Linux, macOS and Windows. A new live backup, exact/attribution restore and mapping-anchor demonstration are still required for Milestone 2 acceptance.
+
+The developer's computer can be off: Vercel serves the API and GitHub Actions runs the hosted backup worker. The user runs the installed CLI on their own computer.
 
 Choose a small public repository that you own, push its commits to GitHub, and sign into the Rivet website with the same account first. Then:
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ccc } from '@ckb-ccc/connector-react';
-import { Shield, Wallet, CheckCircle2 } from 'lucide-react';
+import { Shield, Wallet, CheckCircle2, FileCheck2, Fingerprint } from 'lucide-react';
 import { SovereignPassport } from './SovereignPassport';
 import { RefreshButton } from './RefreshButton';
 import { CotaManifest } from './CotaManifest';
@@ -207,11 +207,14 @@ export function WalletIdentity() {
 
   return (
     <section id="identity" className={styles.card} aria-labelledby="identity-title">
+      <div className={styles.walletPanel}>
       <div className={styles.heading}>
         <span className={styles.icon}><Shield size={22} aria-hidden="true" /></span>
-        <div className={styles.headingText}><h2 id="identity-title">Developer identity</h2><span className={styles.badge}>Optional · CKB testnet</span></div>
+        <div className={styles.headingText}><h2 id="identity-title">Identity wallet</h2><span className={styles.badge}>A wallet you control. An identity you own.</span></div>
         {registrationStatus === 'confirmed' && <span className={styles.active} role="status"><CheckCircle2 size={14} aria-hidden="true" /> Active</span>}
       </div>
+      {!identity && !identityStatusError && <p className={styles.description} role="status">Loading your identity…</p>}
+      {(identity?.address || connectedAddress) && <div className={styles.linkedWallet}><Wallet size={18} aria-hidden="true" /><div><span>{identity?.address ? 'Linked wallet' : 'Connected wallet'}</span><code>{identity?.address || connectedAddress}</code></div></div>}
       {registrationStatus !== 'confirmed' && <p className={styles.description}>Give your backups an identity you own. Rivet covers activation.</p>}
       {identity?.address && identity.address !== connectedAddress && (
         <p className={styles.description}>{connectedAddress ? 'Connect your linked identity wallet to make changes.' : 'Your identity is saved. Reconnect your wallet to make changes.'}</p>
@@ -224,6 +227,32 @@ export function WalletIdentity() {
           {' '}<a href={identity.registration.explorerUrl} target="_blank" rel="noreferrer">View transaction</a>
         </p>
       )}
+      {notice && <p role="status">{notice}</p>}
+      {(error || identityStatusError || (!manifestEnabled && recordsStatusError)) && <p role="alert" className={styles.error}>{error || identityStatusError || recordsStatusError}</p>}
+      <div className={styles.footer}><div className={styles.actions}>
+        {!signer ? (
+          <button type="button" className="btn btn--primary" onClick={() => open()}><Wallet size={16} aria-hidden="true" /> Connect wallet</button>
+        ) : (
+          <>
+            {!registered && (
+              <button type="button" className="btn btn--primary" aria-describedby={connectedAddress && !isJoyId ? 'identity-wallet-help' : undefined} disabled={busy || !identity || !isJoyId || (!!verified && !identity.enabled)} onClick={() => setDialog('activate')}>
+                {busy ? 'Activating…' : identity?.enabled ? 'Activate identity' : 'Verify wallet ownership'}
+              </button>
+            )}
+            {!registered && !isJoyId && <button type="button" className="btn btn--secondary" disabled={busy} onClick={chooseJoyId}>Choose JoyID wallet</button>}
+            <button type="button" className="btn btn--secondary" onClick={() => setDialog('wallet')}>Wallet details</button>
+          </>
+        )}
+        {registrationStatus === 'prepared' && <button type="button" className="btn btn--primary" disabled={busy} onClick={activate}>Retry activation</button>}
+        {registrationStatus !== 'confirmed' && <RefreshButton label="Check status" disabled={busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />}
+        {registrationStatus === 'confirmed' && (recordsUpdate || recordsStatusError || !manifestEnabled) && <button type="button" className={styles.textButton} onClick={() => setDialog('history')}>Earlier proofs</button>}
+      </div>
+      <HelpButton title="Your developer identity">
+        <p>Your GitHub backups work without a wallet. A developer identity is an optional way to link your GitHub account and public backup proofs to a wallet you control.</p>
+        <p>Connect JoyID on CKB testnet, then choose <strong>Activate identity</strong>. JoyID asks you to prove wallet ownership with your passkey. Rivet sponsors the CoTA identity activation.</p>
+        <p>Once active, you can sync backup proofs and optionally mint a developer passport. Passport minting uses your wallet’s test CKB.</p>
+      </HelpButton></div>
+      </div>
       {registrationStatus === 'confirmed' && (
         <>
           <div className={styles.identityGrid}>
@@ -253,31 +282,11 @@ export function WalletIdentity() {
           </ActionDialog>
         </>
       )}
-      {notice && <p role="status">{notice}</p>}
-      {(error || identityStatusError || (!manifestEnabled && recordsStatusError)) && <p role="alert" className={styles.error}>{error || identityStatusError || recordsStatusError}</p>}
-      <div className={styles.footer}><div className={styles.actions}>
-        {!signer ? (
-          <button type="button" className="btn btn--primary" onClick={() => open()}><Wallet size={16} aria-hidden="true" /> Connect wallet</button>
-        ) : (
-          <>
-            {!registered && (
-              <button type="button" className="btn btn--primary" aria-describedby={connectedAddress && !isJoyId ? 'identity-wallet-help' : undefined} disabled={busy || !identity || !isJoyId || (!!verified && !identity.enabled)} onClick={() => setDialog('activate')}>
-                {busy ? 'Activating…' : identity?.enabled ? 'Activate identity' : 'Verify wallet ownership'}
-              </button>
-            )}
-            {!registered && !isJoyId && <button type="button" className="btn btn--secondary" disabled={busy} onClick={chooseJoyId}>Choose JoyID wallet</button>}
-            <button type="button" className="btn btn--secondary" onClick={() => setDialog('wallet')}>Wallet details</button>
-          </>
-        )}
-        {registrationStatus === 'prepared' && <button type="button" className="btn btn--primary" disabled={busy} onClick={activate}>Retry activation</button>}
-        {registrationStatus !== 'confirmed' && <RefreshButton label="Check status" disabled={busy} onRefresh={() => { setError(''); return refresh(); }} onError={failure => setError(failure.message)} />}
-        {registrationStatus === 'confirmed' && (recordsUpdate || recordsStatusError || !manifestEnabled) && <button type="button" className={styles.textButton} onClick={() => setDialog('history')}>Earlier proofs</button>}
-      </div>
-      <HelpButton title="Your developer identity">
-        <p>Your GitHub backups work without a wallet. A developer identity is an optional way to link your GitHub account and public backup proofs to a wallet you control.</p>
-        <p>Connect JoyID on CKB testnet, then choose <strong>Activate identity</strong>. JoyID asks you to prove wallet ownership with your passkey. Rivet sponsors the CoTA identity activation.</p>
-        <p>Once active, you can sync backup proofs and optionally mint a developer passport. Passport minting uses your wallet’s test CKB.</p>
-      </HelpButton></div>
+
+      {registrationStatus !== 'confirmed' && <div className={styles.identityGrid}>
+        <article className={styles.preview}><div className={styles.previewIcon}><FileCheck2 size={24} aria-hidden="true" /></div><h3>Backup proofs</h3><p>Link your completed public backups to your developer identity. Keep proof of your work in a wallet you own.</p><span>Available after activation</span></article>
+        <article className={styles.preview}><div className={styles.previewIcon}><Fingerprint size={24} aria-hidden="true" /></div><h3>Developer passport</h3><p>Create an optional collectible for your identity and backup proofs. Review the test CKB cost before minting.</p><span>Available after activation</span></article>
+      </div>}
       <ActionDialog open={dialog === 'wallet'} onClose={() => setDialog(null)} title="Your identity wallet" actions={<>
         <button type="button" className="btn btn--secondary" onClick={() => setDialog(null)}>Done</button>
         {signer && <button type="button" className="btn btn--secondary" disabled={busy} onClick={async () => { await disconnect(); setDialog(null); }}>Disconnect wallet</button>}
