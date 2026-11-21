@@ -28,7 +28,7 @@
     "pnpm": "12.4.x"
   },
   "devDependencies": {
-    "netlify-cli": "^27.8.0",
-    "vercel": "^59.22.0"
+    "netlify-cli": "^27.20.1",
+    "vercel": "^66.6.0"
   }
 }

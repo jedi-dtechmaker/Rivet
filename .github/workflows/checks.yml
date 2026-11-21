@@ -64,7 +64,7 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod --audit-level=moderate
+      - run: pnpm audit --audit-level=low
       - name: Install disposable test schema
         run: pnpm --filter @rivet/web exec prisma db push --skip-generate
       - name: Verify additive release setup

@@ -29,7 +29,7 @@
     "dotenv": "^18.0.0",
     "lucide-react": "^0.460.0",
     "merkletreejs": "^0.6.0",
-    "next": "15.5.28",
+    "next": "15.5.29",
     "next-auth": "^4.24.15",
     "pg": "^8.23.0",
     "pinata-web3": "^0.5.4",
