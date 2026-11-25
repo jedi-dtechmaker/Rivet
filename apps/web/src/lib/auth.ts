@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import GithubProvider from 'next-auth/providers/github';
-import { db } from '@/lib/db';
+import { prisma, readWithConnectionRetry } from '@/lib/db';
+import { recordSignIn } from '@/lib/analytics';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,24 +17,24 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, profile }) {
-      if (!profile) return true;
-      
+    async signIn({ profile }) {
+      if (!profile) return false;
+
       const githubId = (profile as any).id?.toString();
       const githubUsername = (profile as any).login as string;
       
-      if (githubId) {
-        try {
-          const existingUser = await db.findUserByGithubId(githubId);
-          if (!existingUser) {
-            await db.createUser({
-              githubId,
-              githubUsername,
-            });
-          }
-        } catch (error) {
-          console.error("Error creating user during sign in:", error);
-        }
+      if (!githubId || !/^\d+$/.test(githubId)) return false;
+      try {
+        const user = await readWithConnectionRetry(() => prisma.user.upsert({
+          where: { githubId },
+          create: { githubId, githubUsername },
+          update: githubUsername ? { githubUsername } : {},
+          select: { id: true },
+        }));
+        await recordSignIn(user.id);
+      } catch {
+        console.error('[auth] Could not save the GitHub account.');
+        return false;
       }
       return true;
     },
