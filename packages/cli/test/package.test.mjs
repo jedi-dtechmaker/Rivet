@@ -24,7 +24,8 @@ test('packed CLI installs offline and logs in, detects another project, backs up
     const packed = JSON.parse((await npm(['pack', '--offline', '--ignore-scripts', '--json', '--cache', cache,
       '--pack-destination', directory], { cwd: packageRoot })).stdout)[0];
     assert.ok(packed.files.every(file => /^(src\/|runtime\/|package\.json$|README\.md$|LICENSE$)/.test(file.path)), 'Only runtime files and package documentation ship');
-    await npm(['install', '--global', '--prefix', prefix, '--cache', cache, '--offline', '--ignore-scripts', '--no-audit', '--no-fund', join(directory, packed.filename)]);
+    const archive = process.env.RIVET_TEST_PACKAGE ? resolve(process.env.RIVET_TEST_PACKAGE) : join(directory, packed.filename);
+    await npm(['install', '--global', '--prefix', prefix, '--cache', cache, '--offline', '--ignore-scripts', '--no-audit', '--no-fund', archive]);
     const installed = process.platform === 'win32' ? join(prefix, 'node_modules', '@rivet', 'cli') : join(prefix, 'lib', 'node_modules', '@rivet', 'cli');
     const native = process.env.RIVET_TEST_BINARY;
     const executable = native || join(installed, 'src', 'cli.mjs');
@@ -63,10 +64,11 @@ test('packed CLI installs offline and logs in, detects another project, backs up
         if (url.pathname === '/api/cli/account') { response.end(JSON.stringify({ githubId: '1001', username: 'Developer' })); return; }
         if (url.pathname === '/api/cli/backup') {
           assert.equal(JSON.parse(body).repoFullName, proof.repository);
-          response.end(JSON.stringify({ accepted: true, startedAt: '2026-11-10T12:00:00Z', previousTxHash: null })); return;
+          response.end(JSON.stringify({ accepted: true, jobId: 'installed-unchanged-backup', startedAt: '2026-11-21T12:00:00Z', previousTxHash: proof.txHash })); return;
         }
         assert.equal(url.pathname, '/api/cli/status'); assert.equal(url.searchParams.get('repo'), proof.repository);
-        response.end(JSON.stringify({ status: 'confirmed', proof })); return;
+        if (url.searchParams.has('since')) assert.equal(url.searchParams.get('jobId'), 'installed-unchanged-backup');
+        response.end(JSON.stringify({ status: 'confirmed', ...(url.searchParams.has('since') ? { unchanged: true } : {}), proof })); return;
       }
       assert.equal(url.pathname, '/rpc'); assert.equal(request.headers.authorization, undefined);
       const { id, method, params } = JSON.parse(body); assert.ok(['get_transaction', 'get_header', 'get_blockchain_info'].includes(method));
@@ -98,6 +100,10 @@ test('packed CLI installs offline and logs in, detects another project, backs up
     assert.equal(status.proof.protocol, 'rivet-backup-proof-v2');
     assert.deepEqual(JSON.parse(await readFile(recovery, 'utf8')), proof);
     assert.equal(JSON.parse(await run(['backup', '--no-wait'], project)).accepted, true);
+    const unchangedRecovery = join(directory, 'unchanged-recovery.secret.json');
+    const unchangedOutput = await run(['backup', '--timeout', '2', '--proof-out', unchangedRecovery], project);
+    assert.match(unchangedOutput, /"unchanged": true/);
+    assert.deepEqual(JSON.parse(await readFile(unchangedRecovery, 'utf8')), proof);
     await rm(project, { recursive: true }); await rm(bundle);
     const recoveryDirectory = join(directory, 'recovery'); await mkdir(recoveryDirectory);
     const result = JSON.parse(await run(['restore', 'Owner/project', '--bundle', encryptedFile, '--rpc', rpcUrl], recoveryDirectory));

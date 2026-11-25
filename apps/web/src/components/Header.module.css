@@ -64,17 +64,10 @@
 }
 
 .header__logo-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-brand-gradient);
-  border-radius: var(--radius-md);
-  color: var(--color-text-inverse);
-  font-weight: var(--weight-extrabold);
-  font-size: var(--text-sm);
-  box-shadow: var(--shadow-glow);
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .header__nav {

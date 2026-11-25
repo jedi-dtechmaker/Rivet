@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Github, Lock, History, Database, ShieldCheck, Shield, ChevronRight } from 'lucide-react';
+import { ArrowRight, Github, Lock, History, Database, ShieldCheck, ChevronRight } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import styles from './page.module.css';
 
@@ -219,7 +219,7 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.footer__inner}>
           <div className={styles.footer__left}>
-            <Shield size={16} />
+            <img src="/rivet-logo.png" alt="" width="24" height="24" />
             <span>© 2026 Rivet. All rights reserved.</span>
           </div>
           <div className={styles.footer__links}>

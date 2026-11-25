@@ -92,9 +92,7 @@ export function Header() {
             </button>
           )}
           <Link href="/" className={styles.header__logo}>
-            <div className={styles['header__logo-icon']}>
-              <Shield size={18} />
-            </div>
+            <img className={styles['header__logo-icon']} src="/rivet-logo.png" alt="" width="36" height="36" />
             Rivet
           </Link>
 
