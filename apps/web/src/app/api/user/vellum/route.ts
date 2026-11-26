@@ -47,7 +47,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(await getVellumIdentityState(user.id), { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     if (vellumIdentityConflict(error)) return NextResponse.json({ error: 'This identity is already linked to another Rivet account.' }, { status: 409 });
-    if (error instanceof TypeError || error instanceof VellumIdentityInactiveError) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof SyntaxError) return NextResponse.json({ error: 'Request body must be valid JSON.' }, { status: 400 });
+    if (error instanceof TypeError || error instanceof VellumIdentityInactiveError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof VellumIdentityUnavailableError) return NextResponse.json({ error: error.message }, { status: 503 });
     return NextResponse.json({ error: 'Identity linking could not finish. Please retry.' }, { status: 503 });
   }
@@ -64,6 +67,7 @@ export async function PATCH(req: NextRequest) {
     if (body.isPublic === true) await runVellumBackupClaimIssuance({ userId: user.id }).catch(() => undefined);
     return NextResponse.json(await getVellumIdentityState(user.id), { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
+    if (error instanceof SyntaxError) return NextResponse.json({ error: 'Request body must be valid JSON.' }, { status: 400 });
     if (error instanceof TypeError) return NextResponse.json({ error: error.message }, { status: 400 });
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return NextResponse.json({ error: 'Link a Vellum identity first.' }, { status: 404 });
@@ -79,7 +83,9 @@ export async function DELETE(req: NextRequest) {
   if (originError) return originError;
   try {
     await unlinkVellumIdentity(user.id);
-    return NextResponse.json({ binding: null, claims: [], profileUrl: null }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return NextResponse.json({ binding: null, claims: [], profileUrl: null,
+      claimIssuanceEnabled: false, needsReconciliation: false },
+      { headers: { 'Cache-Control': 'private, no-store' } });
   } catch {
     return NextResponse.json({ error: 'The identity could not be unlinked.' }, { status: 503 });
   }

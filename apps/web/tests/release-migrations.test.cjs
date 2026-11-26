@@ -32,6 +32,17 @@ test('release setup upgrades a legacy schema twice without losing users or backu
     const tables = await client.$queryRawUnsafe('SELECT table_name FROM information_schema.tables WHERE table_schema = $1', schema);
     for (const table of ['WalletChallenge', 'CotaRegistration', 'CotaUpdate', 'WorkerDispatch', 'VellumDidChallenge',
       'VellumIdentityBinding', 'VellumBackupClaim', 'VellumIssuerLease']) assert.ok(tables.some(row => row.table_name === table));
+    const constraints = await client.$queryRawUnsafe(
+      'SELECT constraint_name FROM information_schema.table_constraints WHERE constraint_schema = $1', schema,
+    );
+    for (const constraint of ['VellumBackupClaim_status_check', 'VellumBackupClaim_nonce_check',
+      'VellumBackupClaim_prepared_check', 'VellumBackupClaim_confirmed_check', 'VellumIssuerLease_revision_check']) {
+      assert.ok(constraints.some(row => row.constraint_name === constraint));
+    }
+    const indexes = await client.$queryRawUnsafe('SELECT indexname FROM pg_indexes WHERE schemaname = $1', schema);
+    for (const index of ['VellumIdentityBinding_did_key', 'VellumBackupClaim_claimId_key',
+      'VellumBackupClaim_transactionHash_key', 'VellumBackupClaim_status_updatedAt_idx',
+      'VellumIssuerLease_repositoryId_key']) assert.ok(indexes.some(row => row.indexname === index));
   } finally {
     await client.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     await client.$disconnect();

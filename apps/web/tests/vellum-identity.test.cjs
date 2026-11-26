@@ -3,7 +3,9 @@ const { afterEach, mock, test } = require('node:test');
 const { ccc } = require('@ckb-ccc/core');
 const { argsToDid } = require('@ckb-ccc/did-ckb');
 const { prisma } = require('../src/lib/db.ts');
-const { createVellumIdentityChallenge, completeVellumIdentityChallenge } = require('../src/lib/vellum-identity.ts');
+const { VellumIdentityInactiveError } = require('../src/lib/vellum-controller.ts');
+const { createVellumIdentityChallenge, completeVellumIdentityChallenge, fetchVellumReputation,
+  getPublicVellumIdentity, resolveVellumIdentityBinding } = require('../src/lib/vellum-identity.ts');
 
 const replacements = [];
 function replace(target, key, implementation) {
@@ -67,4 +69,50 @@ test('controller rotation and invalid wallet signatures cannot create a binding'
   const rotated = ccc.Script.from({ codeHash: LOCK.codeHash, hashType: LOCK.hashType, args: `0x${'66'.repeat(20)}` });
   await assert.rejects(completeVellumIdentityChallenge({ userId: 'user-id', challengeId: 'challenge-id', signature: SIGNATURE, isPublic: false }, dependencies(rotated)), /controller changed/);
   await assert.rejects(completeVellumIdentityChallenge({ userId: 'user-id', challengeId: 'challenge-id', signature: SIGNATURE, isPublic: false }, dependencies(LOCK, false)), /does not control/);
+});
+
+test('stale and inactive bindings do not expose an unverified display name', async () => {
+  const binding = { did: DID, controllerLockHash: LOCK.hash() };
+  const document = { services: { profile: { type: 'VellumProfile', displayName: 'Current controller' } } };
+  assert.deepEqual(await resolveVellumIdentityBinding(binding, async () => ({ did: DID, lock: LOCK, document, client: {} })),
+    { status: 'verified', displayName: 'Current controller' });
+  const rotated = ccc.Script.from({ ...LOCK, args: `0x${'66'.repeat(20)}` });
+  assert.deepEqual(await resolveVellumIdentityBinding(binding, async () => ({ did: DID, lock: rotated, document, client: {} })),
+    { status: 'controller_changed', displayName: null });
+  assert.deepEqual(await resolveVellumIdentityBinding(binding, async () => { throw new VellumIdentityInactiveError(); }),
+    { status: 'inactive', displayName: null });
+});
+
+test('reputation summaries reject duplicate or unsafe external display fields', async () => {
+  const summary = {
+    ok: true,
+    status: 'available',
+    subject: DID,
+    policyVersion: 'vellum.reputation.v7',
+    evaluatedAt: 2_000_000_000,
+    overall: { score: 20, maximum: 1_000 },
+    categories: [{ id: 'contribution', score: 20, maximum: 400 }],
+    evidence: [{}],
+  };
+  const request = value => async () => new Response(JSON.stringify(value), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+  assert.deepEqual(await fetchVellumReputation(DID, request(summary)), {
+    policyVersion: 'vellum.reputation.v7',
+    evaluatedAt: 2_000_000_000,
+    overall: { score: 20, maximum: 1_000 },
+    categories: [{ id: 'contribution', score: 20, maximum: 400 }],
+    evidenceCount: 1,
+  });
+  assert.equal(await fetchVellumReputation(DID, request({ ...summary,
+    categories: [summary.categories[0], summary.categories[0]] })), null);
+  assert.equal(await fetchVellumReputation(DID, request({ ...summary, policyVersion: 'vellum\nspoofed' })), null);
+});
+
+test('public identity lookup treats GitHub usernames case-insensitively', async () => {
+  let query;
+  replace(prisma.user, 'findFirst', async value => { query = value; return null; });
+  assert.equal(await getPublicVellumIdentity('Mixed-Case'), null);
+  assert.deepEqual(query.where.githubUsername, { equals: 'Mixed-Case', mode: 'insensitive' });
 });

@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { prisma, readWithConnectionRetry } from './db';
-import { vellumPublicUrls } from './vellum-config';
+import { vellumIssuerConfiguration, vellumPublicUrls } from './vellum-config';
 import {
   resolveVellumController,
+  VellumIdentityInactiveError,
   vellumDisplayName,
   verifyVellumControllerSignature,
   type VellumControllerSignature,
@@ -142,6 +143,15 @@ function safeInteger(value: unknown, maximum = Number.MAX_SAFE_INTEGER): value i
   return Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= maximum;
 }
 
+function safeIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-z0-9][a-z0-9._-]{0,79}$/i.test(value);
+}
+
+function claimIssuanceEnabled() {
+  try { return vellumIssuerConfiguration().enabled; }
+  catch { return false; }
+}
+
 export async function fetchVellumReputation(did: string, fetchImplementation: typeof fetch = fetch): Promise<ReputationSummary | null> {
   const { api } = vellumPublicUrls();
   let response: Response;
@@ -157,29 +167,38 @@ export async function fetchVellumReputation(did: string, fetchImplementation: ty
   const body = value as Record<string, unknown>;
   const overall = body.overall as Record<string, unknown> | undefined;
   const categories = body.categories;
-  if (body.ok !== true || body.status !== 'available' || body.subject !== did || typeof body.policyVersion !== 'string'
+  if (body.ok !== true || body.status !== 'available' || body.subject !== did || !safeIdentifier(body.policyVersion)
     || !safeInteger(body.evaluatedAt) || !overall || !safeInteger(overall.score, 1_000) || overall.maximum !== 1_000
-    || !Array.isArray(categories) || categories.length > 20 || !Array.isArray(body.evidence)) return null;
+    || !Array.isArray(categories) || categories.length > 20 || !Array.isArray(body.evidence)
+    || body.evidence.length > 10_000) return null;
   const parsedCategories: ReputationSummary['categories'] = [];
+  const categoryIds = new Set<string>();
   for (const category of categories) {
     if (!category || typeof category !== 'object' || Array.isArray(category)) return null;
     const item = category as Record<string, unknown>;
-    if (typeof item.id !== 'string' || item.id.length > 80 || !safeInteger(item.score, 1_000)
+    if (!safeIdentifier(item.id) || categoryIds.has(item.id) || !safeInteger(item.score, 1_000)
       || !safeInteger(item.maximum, 1_000) || item.maximum < 1 || item.score > item.maximum) return null;
+    categoryIds.add(item.id);
     parsedCategories.push({ id: item.id, score: item.score, maximum: item.maximum });
   }
   return { policyVersion: body.policyVersion, evaluatedAt: body.evaluatedAt, overall: { score: overall.score, maximum: 1_000 },
     categories: parsedCategories, evidenceCount: body.evidence.length };
 }
 
-async function resolveBinding(binding: { did: string; controllerLockHash: string }) {
+export async function resolveVellumIdentityBinding(
+  binding: { did: string; controllerLockHash: string },
+  resolveController: typeof resolveVellumController = resolveVellumController,
+) {
   try {
-    const controller = await resolveVellumController(binding.did);
+    const controller = await resolveController(binding.did);
+    const verified = controller.lock.hash() === binding.controllerLockHash;
     return {
-      status: controller.lock.hash() === binding.controllerLockHash ? 'verified' as const : 'controller_changed' as const,
-      displayName: vellumDisplayName(controller.document),
+      status: verified ? 'verified' as const : 'controller_changed' as const,
+      displayName: verified ? vellumDisplayName(controller.document) : null,
     };
-  } catch { return { status: 'unavailable' as const, displayName: null }; }
+  } catch (error) {
+    return { status: error instanceof VellumIdentityInactiveError ? 'inactive' as const : 'unavailable' as const, displayName: null };
+  }
 }
 
 export async function getVellumIdentityState(userId: string) {
@@ -190,12 +209,22 @@ export async function getVellumIdentityState(userId: string) {
       repository: { select: { fullName: true } },
     } })),
   ]);
-  if (!binding) return { binding: null, claims: [], profileUrl: null };
-  const resolved = await resolveBinding(binding);
+  if (!binding) return { binding: null, claims: [], profileUrl: null, claimIssuanceEnabled: false, needsReconciliation: false };
+  const issuanceEnabled = claimIssuanceEnabled();
+  const [resolved, pendingRepository] = await Promise.all([
+    resolveVellumIdentityBinding(binding),
+    binding.isPublic && issuanceEnabled ? readWithConnectionRetry(() => prisma.repository.findFirst({
+      where: { userId, isPrivate: false, isBackedUp: true, vellumClaim: null },
+      select: { id: true },
+    })) : null,
+  ]);
   const { profile } = vellumPublicUrls();
   return {
     binding: { did: binding.did, isPublic: binding.isPublic, verifiedAt: binding.verifiedAt, ...resolved },
     profileUrl: `${profile}/profile/${encodeURIComponent(binding.did)}`,
+    claimIssuanceEnabled: issuanceEnabled,
+    needsReconciliation: resolved.status !== 'inactive' && resolved.status !== 'controller_changed'
+      && Boolean(pendingRepository),
     claims: claims.map(claim => ({ ...claim, explorerUrl: claim.transactionHash
       ? `https://pudge.explorer.nervos.org/transaction/${claim.transactionHash}` : null })),
   };
@@ -204,12 +233,13 @@ export async function getVellumIdentityState(userId: string) {
 export async function getPublicVellumIdentity(username: string) {
   if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(username)) return null;
   const user = await readWithConnectionRetry(() => prisma.user.findFirst({
-    where: { githubUsername: username, isProfilePublic: true, vellumIdentity: { is: { isPublic: true } } },
+    where: { githubUsername: { equals: username, mode: 'insensitive' }, isProfilePublic: true,
+      vellumIdentity: { is: { isPublic: true } } },
     select: { vellumIdentity: true },
   }));
   const binding = user?.vellumIdentity;
   if (!binding) return null;
-  const resolved = await resolveBinding(binding);
+  const resolved = await resolveVellumIdentityBinding(binding);
   const { profile } = vellumPublicUrls();
   const reputation = resolved.status === 'verified' ? await fetchVellumReputation(binding.did) : null;
   return {

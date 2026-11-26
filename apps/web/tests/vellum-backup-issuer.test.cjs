@@ -4,7 +4,8 @@ const { ccc } = require('@ckb-ccc/core');
 const { argsToDid } = require('@ckb-ccc/did-ckb');
 const { prisma } = require('../src/lib/db.ts');
 const { acquireVellumIssuerLease, createVellumIssuerSigner, persistedVellumClaimTransaction,
-  prepareVellumBackupClaim, reconcilePreparedVellumBackupClaim } = require('../src/lib/vellum-backup-claims.ts');
+  prepareVellumBackupClaim, reconcilePreparedVellumBackupClaim,
+  deferVellumBackupClaimPreparation } = require('../src/lib/vellum-backup-claims.ts');
 const { RIVET_BACKUP_SCHEMA_HASH, vellumClaimScripts } = require('../src/lib/vellum-config.ts');
 
 const replacements = [];
@@ -36,19 +37,34 @@ function persistedClaim(transaction) {
 }
 
 test('claim preparation pins subject, issuer, schema, payload, timestamp and nonce before signing exact bytes', async () => {
-  const transaction = ccc.Transaction.default();
+  const transaction = ccc.Transaction.from({
+    outputs: [{ lock: LOCK, capacity: ccc.fixedPointFrom(100) }], outputsData: ['0x'],
+  });
   const signer = { signOnlyTransaction: async candidate => candidate };
   let written;
   const result = await prepareVellumBackupClaim({ subjectDid: SUBJECT_DID, payload: PAYLOAD,
     issuedAt: new Date(2_000_000_000_000), nonce: `0x${'55'.repeat(32)}` }, {}, CONFIGURATION, {
     createSigner: async () => signer,
-    writeClaim: async input => { written = input; return { tx: transaction, claimId: `0x${'66'.repeat(32)}`, outputIndex: 2,
+    writeClaim: async input => { written = input; return { tx: transaction, claimId: `0x${'66'.repeat(32)}`, outputIndex: 0,
       issuerSource: { kind: 'input', inputIndex: 0, outputIndex: 0 }, controllerInputIndex: 0 }; },
   });
-  assert.deepEqual(result, { claimId: `0x${'66'.repeat(32)}`, outputIndex: 2,
+  assert.deepEqual(result, { claimId: `0x${'66'.repeat(32)}`, outputIndex: 0,
     signedTransaction: ccc.hexFrom(transaction.toBytes()), transactionHash: transaction.hash() });
   assert.deepEqual(written, { issuerSigner: signer, scripts: vellumClaimScripts, input: { subject: { did: SUBJECT_DID },
     issuerDid: ISSUER_DID, schemaHash: RIVET_BACKUP_SCHEMA_HASH, payload: PAYLOAD, issuedAt: 2_000_000_000, nonce: `0x${'55'.repeat(32)}` } });
+});
+
+test('claim preparation rejects malformed writer metadata before persisting signed bytes', async () => {
+  const transaction = ccc.Transaction.from({
+    outputs: [{ lock: LOCK, capacity: ccc.fixedPointFrom(100) }], outputsData: ['0x'],
+  });
+  const input = { subjectDid: SUBJECT_DID, payload: PAYLOAD,
+    issuedAt: new Date(2_000_000_000_000), nonce: `0x${'55'.repeat(32)}` };
+  const dependencies = { createSigner: async () => ({ signOnlyTransaction: async candidate => candidate }) };
+  await assert.rejects(prepareVellumBackupClaim(input, {}, CONFIGURATION, { ...dependencies,
+    writeClaim: async () => ({ tx: transaction, claimId: 'invalid', outputIndex: 0 }) }), /invalid transaction metadata/);
+  await assert.rejects(prepareVellumBackupClaim(input, {}, CONFIGURATION, { ...dependencies,
+    writeClaim: async () => ({ tx: transaction, claimId: `0x${'66'.repeat(32)}`, outputIndex: 1 }) }), /invalid transaction metadata/);
 });
 
 test('claim preparation rejects any signer that changes the prepared transaction hash', async () => {
@@ -79,6 +95,7 @@ test('persisted transaction validation rejects incomplete, altered, and unspenda
   assert.equal(persistedVellumClaimTransaction(claim).toHex(), transaction.toHex());
   assert.throws(() => persistedVellumClaimTransaction({ ...claim, signedTransaction: null }), /incomplete/);
   assert.throws(() => persistedVellumClaimTransaction({ ...claim, transactionHash: `0x${'aa'.repeat(32)}` }), /does not match/);
+  assert.throws(() => persistedVellumClaimTransaction({ ...claim, claimId: 'invalid' }), /metadata is invalid/);
   assert.throws(() => persistedVellumClaimTransaction({ ...claim, outputIndex: 1 }), /does not match/);
 });
 
@@ -151,4 +168,25 @@ test('issuer lease permits only one active transaction builder and resumes the s
   const resumed = await acquireVellumIssuerLease();
   assert.equal(resumed.claim.repositoryId, claim.repositoryId);
   assert.notEqual(resumed.token, first.token);
+});
+
+test('retryable preparation failures release the global lease without releasing signed transactions', async () => {
+  const transaction = ccc.Transaction.from({
+    outputs: [{ lock: LOCK, capacity: ccc.fixedPointFrom(100) }], outputsData: ['0x'],
+  });
+  const claim = { ...persistedClaim(transaction), status: 'preparing', claimId: null, outputIndex: null,
+    signedTransaction: null, transactionHash: null };
+  let update;
+  let deleted;
+  replace(prisma, '$transaction', async callback => callback({
+    $queryRaw: async () => [],
+    vellumBackupClaim: { updateMany: async value => { update = value; return { count: 1 }; } },
+    vellumIssuerLease: { deleteMany: async value => { deleted = value; return { count: 1 }; } },
+  }));
+  assert.deepEqual(await deferVellumBackupClaimPreparation(claim, 'lease-token', 'ANCHOR_PENDING'),
+    { status: 'pending', repositoryId: 'repository-id' });
+  assert.deepEqual(update.where, { repositoryId: 'repository-id', status: 'preparing', leaseToken: 'lease-token' });
+  assert.equal(update.data.leaseToken, null);
+  assert.equal(update.data.lastErrorCode, 'ANCHOR_PENDING');
+  assert.deepEqual(deleted, { where: { key: 'repository-backup', repositoryId: 'repository-id', token: 'lease-token' } });
 });

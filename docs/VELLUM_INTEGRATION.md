@@ -10,7 +10,7 @@ The identity page accepts a canonical active `did:ckb`. Rivet resolves the live 
 
 A DID can belong to only one Rivet account. Relinking requires a fresh controller proof. Public display and backup claim issuance require an explicit public opt-in. Making the binding private or unlinking it stops new claim records from being created; it cannot cancel an exact transaction already prepared for safe retry or remove a Claim Cell already published on-chain.
 
-Public profile reads resolve the current controller again. A changed or unavailable controller is shown as such, and reputation is not presented as current until the binding verifies. Reputation comes from Vellum's public API and is display-only: Rivet backup and recovery paths do not use it for authorization or availability.
+Public profile reads resolve the current controller again. An inactive, changed, or unavailable controller is shown as such, and reputation is not presented as current until the binding verifies. Reputation comes from Vellum's public API and is display-only: Rivet backup and recovery paths do not use it for authorization or availability.
 
 ## Backup claim
 

@@ -64,7 +64,7 @@ function publicUrl(value: string | undefined, fallback: string): string {
   let parsed: URL;
   try { parsed = new URL(value?.trim() || fallback); }
   catch { throw new VellumConfigurationError('A configured Vellum URL is invalid.'); }
-  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) {
     throw new VellumConfigurationError('Configured Vellum URLs must be public HTTPS origins.');
   }
   return parsed.toString().replace(/\/$/, '');

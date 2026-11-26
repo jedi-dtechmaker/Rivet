@@ -2,7 +2,8 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { ccc } = require('@ckb-ccc/core');
 const { argsToDid } = require('@ckb-ccc/did-ckb');
-const { canonicalVellumDid, resolveVellumController, verifyVellumControllerSignature } = require('../src/lib/vellum-controller.ts');
+const { canonicalVellumDid, resolveVellumController, vellumDisplayName,
+  verifyVellumControllerSignature } = require('../src/lib/vellum-controller.ts');
 
 async function fixture(privateKey = `0x${'11'.repeat(32)}`) {
   const client = { addressPrefix: 'ckt', getKnownScript: async () => ({
@@ -36,4 +37,11 @@ test('DID resolution rejects inactive, unavailable, and non-canonical identities
   assert.throws(() => canonicalVellumDid(value.did.toUpperCase()), /canonical/);
   await assert.rejects(resolveVellumController(value.did, { ...value.dependencies, resolveDid: async () => null }), /not active/);
   await assert.rejects(resolveVellumController(value.did, { ...value.dependencies, resolveDid: async () => { throw new Error('RPC body'); } }), /could not be resolved/);
+});
+
+test('profile display names reject invisible and bidirectional control characters', () => {
+  const document = displayName => ({ services: { profile: { type: 'VellumProfile', displayName } } });
+  assert.equal(vellumDisplayName(document('Rivet Builder')), 'Rivet Builder');
+  assert.equal(vellumDisplayName(document('Rivet\u202eBuilder')), null);
+  assert.equal(vellumDisplayName(document('Rivet\u200bBuilder')), null);
 });

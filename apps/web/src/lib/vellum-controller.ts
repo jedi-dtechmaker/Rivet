@@ -112,9 +112,6 @@ export function vellumDisplayName(document: unknown): string | null {
   const value = profile as Record<string, unknown>;
   if (value.type !== 'VellumProfile' || typeof value.displayName !== 'string') return null;
   const displayName = value.displayName.trim();
-  if (!displayName || displayName.length > 160 || [...displayName].some(character => {
-    const code = character.codePointAt(0)!;
-    return code <= 0x1f || code === 0x7f;
-  })) return null;
+  if (!displayName || displayName.length > 160 || /[\p{Cc}\p{Cf}]/u.test(displayName)) return null;
   return displayName;
 }

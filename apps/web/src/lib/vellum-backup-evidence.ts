@@ -82,7 +82,7 @@ export async function findVellumBackupEvidence(
     }
     throw new VellumBackupEvidenceError('service_unavailable', 'The Vellum identity could not be resolved.');
   }
-  if (controller.lock.hash() !== binding.controllerLockHash) {
+  if (controller.did !== binding.did || controller.lock.hash() !== binding.controllerLockHash) {
     throw new VellumBackupEvidenceError('subject_changed', 'The linked identity controller changed. Verify it again before claim issuance.');
   }
   if (!saved.ckbTxHash || !/^0x[0-9a-f]{64}$/i.test(saved.ckbTxHash) || !saved.lastBackupCid

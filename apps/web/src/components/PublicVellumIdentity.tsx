@@ -7,7 +7,7 @@ import styles from './VellumIdentity.module.css';
 type PublicIdentity = {
   did: string;
   displayName: string | null;
-  status: 'verified' | 'controller_changed' | 'unavailable';
+  status: 'verified' | 'controller_changed' | 'inactive' | 'unavailable';
   profileUrl: string;
   reputation: null | {
     policyVersion: string;
@@ -38,7 +38,9 @@ export function PublicVellumIdentity({ username }: { username: string }) {
     </div>
     <code className={styles.did}>{identity.did}</code>
     {identity.status !== 'verified' && <p className={styles.warning}><ShieldAlert size={16} aria-hidden="true" />
-      {identity.status === 'controller_changed' ? 'The identity controller changed after it was linked.' : 'The identity controller is temporarily unavailable.'}</p>}
+      {identity.status === 'controller_changed' ? 'The identity controller changed after it was linked.'
+        : identity.status === 'inactive' ? 'The linked identity is no longer active.'
+          : 'The identity controller is temporarily unavailable.'}</p>}
     {identity.reputation && <div className={styles.reputation}>
       <div className={styles.score}><strong>{identity.reputation.overall.score}</strong><span>of {identity.reputation.overall.maximum}<small>Reputation</small></span></div>
       <div className={styles.categories}>{identity.reputation.categories.map(category => <span key={category.id}>

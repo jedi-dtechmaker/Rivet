@@ -26,4 +26,5 @@ test('Rivet pins the registered backup schema and accepts only public HTTPS Vell
   assert.deepEqual(vellumPublicUrls({}), { api: 'https://dashboard.usevellum.xyz', profile: 'https://usevellum.xyz' });
   assert.throws(() => vellumPublicUrls({ VELLUM_API_URL: 'http://localhost:3000' }), /HTTPS/);
   assert.throws(() => vellumPublicUrls({ VELLUM_PROFILE_URL: 'https://user:pass@example.com' }), /HTTPS/);
+  assert.throws(() => vellumPublicUrls({ VELLUM_API_URL: 'https://example.com/api' }), /HTTPS origins/);
 });

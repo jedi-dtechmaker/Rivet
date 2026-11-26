@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     const challenge = await createVellumIdentityChallenge(user.id, body.did, origin);
     return NextResponse.json(challenge, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
+    if (error instanceof SyntaxError) return NextResponse.json({ error: 'Request body must be valid JSON.' }, { status: 400 });
     if (error instanceof TypeError || error instanceof VellumIdentityInactiveError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

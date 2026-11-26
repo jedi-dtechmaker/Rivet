@@ -20,11 +20,13 @@ type IdentityState = {
     did: string;
     displayName: string | null;
     isPublic: boolean;
-    status: 'verified' | 'controller_changed' | 'unavailable';
+    status: 'verified' | 'controller_changed' | 'inactive' | 'unavailable';
     verifiedAt: string;
   };
   claims: Claim[];
   profileUrl: string | null;
+  claimIssuanceEnabled: boolean;
+  needsReconciliation: boolean;
 };
 
 async function responseJson(response: Response) {
@@ -41,6 +43,10 @@ const claimLabel: Record<string, string> = {
   review_required: 'Needs review',
 };
 
+const activeClaimStatuses = new Set(['preparing', 'prepared', 'submitted']);
+const needsClaimReconciliation = (state: IdentityState) => state.claimIssuanceEnabled
+  && (state.needsReconciliation || state.claims.some(claim => activeClaimStatuses.has(claim.status)));
+
 export function VellumIdentity() {
   const { open } = ccc.useCcc();
   const signer = ccc.useSigner();
@@ -53,12 +59,24 @@ export function VellumIdentity() {
   const [notice, setNotice] = useState('');
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const reconciled = useRef(false);
+  const reconciliationInFlight = useRef(false);
 
   const refresh = useCallback(async () => {
     const value = await fetch('/api/user/vellum', { cache: 'no-store' }).then(responseJson) as IdentityState;
     setState(value);
     return value;
   }, []);
+
+  const reconcileClaims = useCallback(async (signal: AbortSignal) => {
+    if (reconciliationInFlight.current) return;
+    reconciliationInFlight.current = true;
+    try {
+      await fetch('/api/user/vellum/claims', { method: 'POST', signal }).catch(() => undefined);
+      if (!signal.aborted) await refresh().catch(() => undefined);
+    } finally {
+      reconciliationInFlight.current = false;
+    }
+  }, [refresh]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -67,24 +85,29 @@ export function VellumIdentity() {
       .then(async (value: IdentityState) => {
         if (controller.signal.aborted) return;
         setState(value);
-        if (!value.binding?.isPublic || reconciled.current) return;
+        if (!value.binding?.isPublic || !needsClaimReconciliation(value) || reconciled.current) return;
         reconciled.current = true;
-        await fetch('/api/user/vellum/claims', { method: 'POST', signal: controller.signal }).catch(() => undefined);
-        if (!controller.signal.aborted) await refresh().catch(() => undefined);
+        await reconcileClaims(controller.signal);
       })
       .catch(() => { if (!controller.signal.aborted) setError('Vellum identity status is temporarily unavailable.'); });
     return () => controller.abort();
-  }, [refresh]);
+  }, [reconcileClaims]);
+
+  const shouldReconcileClaims = Boolean(state?.binding?.isPublic && needsClaimReconciliation(state));
 
   useEffect(() => {
-    if (!state?.binding?.isPublic) return;
+    if (!shouldReconcileClaims) return;
     const controller = new AbortController();
-    const timer = window.setInterval(async () => {
-      await fetch('/api/user/vellum/claims', { method: 'POST', signal: controller.signal }).catch(() => undefined);
-      if (!controller.signal.aborted) await refresh().catch(() => undefined);
-    }, 15_000);
-    return () => { controller.abort(); window.clearInterval(timer); };
-  }, [refresh, state?.binding?.isPublic]);
+    let timer: number | undefined;
+    let attempts = 0;
+    const reconcile = async () => {
+      attempts += 1;
+      await reconcileClaims(controller.signal);
+      if (!controller.signal.aborted && attempts < 20) timer = window.setTimeout(reconcile, 15_000);
+    };
+    timer = window.setTimeout(reconcile, 15_000);
+    return () => { controller.abort(); if (timer !== undefined) window.clearTimeout(timer); };
+  }, [reconcileClaims, shouldReconcileClaims]);
 
   async function linkIdentity() {
     if (!signer) { await open(); return; }
@@ -146,6 +169,7 @@ export function VellumIdentity() {
         <code>{binding.did}</code>
       </div>
       {binding.status === 'controller_changed' && <p className={styles.warning}><ShieldAlert size={16} aria-hidden="true" /> The controller changed. Link this identity again with its current wallet.</p>}
+      {binding.status === 'inactive' && <p className={styles.warning}><ShieldAlert size={16} aria-hidden="true" /> This identity is no longer active. Link an active identity to continue.</p>}
       {binding.status === 'unavailable' && <p className={styles.warning}><ShieldAlert size={16} aria-hidden="true" /> Controller verification is temporarily unavailable.</p>}
       <label className={styles.consent}><input type="checkbox" checked={binding.isPublic} disabled={busy}
         onChange={event => setVisibility(event.target.checked)} /><span>Show this identity and its Vellum reputation on my public Rivet profile.</span></label>

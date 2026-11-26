@@ -71,8 +71,13 @@ export async function prepareVellumBackupClaim(
   const transactionHash = built.tx.hash();
   const signed = await signer.signOnlyTransaction(built.tx);
   if (signed.hash() !== transactionHash) throw new Error('The issuer signer changed the prepared transaction.');
-  return { claimId: built.claimId, outputIndex: built.outputIndex,
-    signedTransaction: ccc.hexFrom(signed.toBytes()), transactionHash };
+  const signedTransaction = ccc.hexFrom(signed.toBytes());
+  if (!/^0x[0-9a-f]{64}$/.test(built.claimId) || !Number.isSafeInteger(built.outputIndex)
+    || built.outputIndex < 0 || !signed.outputs[built.outputIndex]
+    || signedTransaction.length > 2_000_000) {
+    throw new Error('The Claim Cell writer returned invalid transaction metadata.');
+  }
+  return { claimId: built.claimId, outputIndex: built.outputIndex, signedTransaction, transactionHash };
 }
 
 function jsonPayload(payload: RivetBackupClaimPayload): Prisma.InputJsonValue {
@@ -120,7 +125,7 @@ export async function acquireVellumIssuerLease() {
     let claim = lease?.repositoryId ? await transaction.vellumBackupClaim.findUnique({ where: { repositoryId: lease.repositoryId } }) : null;
     if (!claim || !ACTIVE_STATUSES.includes(claim.status as typeof ACTIVE_STATUSES[number])) {
       claim = await transaction.vellumBackupClaim.findFirst({
-        where: { status: { in: [...ACTIVE_STATUSES] } }, orderBy: [{ createdAt: 'asc' }, { repositoryId: 'asc' }],
+        where: { status: { in: [...ACTIVE_STATUSES] } }, orderBy: [{ updatedAt: 'asc' }, { repositoryId: 'asc' }],
       });
     }
     if (!claim) {
@@ -145,6 +150,19 @@ async function releaseLease(repositoryId: string, token: string) {
     await transaction.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(7824112)`;
     await transaction.vellumIssuerLease.deleteMany({ where: { key: LEASE_KEY, repositoryId, token } });
     await transaction.vellumBackupClaim.updateMany({ where: { repositoryId, leaseToken: token }, data: { leaseToken: null } });
+  });
+}
+
+export async function deferVellumBackupClaimPreparation(claim: VellumBackupClaim, token: string, code: string) {
+  return prisma.$transaction(async transaction => {
+    await transaction.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(7824112)`;
+    const updated = await transaction.vellumBackupClaim.updateMany({
+      where: { repositoryId: claim.repositoryId, status: 'preparing', leaseToken: token },
+      data: { lastErrorCode: code, leaseToken: null, revision: { increment: 1 } },
+    });
+    if (updated.count !== 1) return { status: 'busy' as const };
+    await transaction.vellumIssuerLease.deleteMany({ where: { key: LEASE_KEY, repositoryId: claim.repositoryId, token } });
+    return { status: 'pending' as const, repositoryId: claim.repositoryId };
   });
 }
 
@@ -174,7 +192,11 @@ export function persistedVellumClaimTransaction(claim: Pick<VellumBackupClaim,
   if (!claim.signedTransaction || !claim.transactionHash || !claim.claimId || claim.outputIndex === null) {
     throw new Error('The persisted Claim Cell transaction is incomplete.');
   }
-  if (claim.signedTransaction.length > 2_000_000) throw new Error('The persisted Claim Cell transaction is too large.');
+  if (!/^0x[0-9a-f]{64}$/.test(claim.claimId) || !/^0x[0-9a-f]{64}$/.test(claim.transactionHash)
+    || !Number.isSafeInteger(claim.outputIndex) || claim.outputIndex < 0
+    || claim.signedTransaction.length > 2_000_000) {
+    throw new Error('The persisted Claim Cell transaction metadata is invalid.');
+  }
   const transaction = ccc.Transaction.fromBytes(claim.signedTransaction);
   if (transaction.hash() !== claim.transactionHash || !transaction.outputs[claim.outputIndex]) {
     throw new Error('The persisted Claim Cell transaction does not match its saved reference.');
@@ -254,16 +276,14 @@ async function processLease(claim: VellumBackupClaim, token: string, configurati
     try { current = await refreshCandidate(current, token, configuration, client); }
     catch (error) {
       if (error instanceof VellumBackupEvidenceError && ['not_eligible', 'anchor_pending', 'service_unavailable', 'subject_changed'].includes(error.code)) {
-        await prisma.vellumBackupClaim.updateMany({ where: { repositoryId: current.repositoryId, leaseToken: token }, data: { lastErrorCode: failureCode(error) } });
-        return { status: 'pending' as const, repositoryId: current.repositoryId };
+        return deferVellumBackupClaimPreparation(current, token, failureCode(error));
       }
       return markReview(current, token, failureCode(error));
     }
     let prepared;
     try { prepared = await prepareVellumBackupClaim(current, client, configuration); }
     catch (error) {
-      await prisma.vellumBackupClaim.updateMany({ where: { repositoryId: current.repositoryId, leaseToken: token }, data: { lastErrorCode: failureCode(error) } });
-      return { status: 'pending' as const, repositoryId: current.repositoryId };
+      return deferVellumBackupClaimPreparation(current, token, failureCode(error));
     }
     const saved = await prisma.vellumBackupClaim.updateMany({
       where: { repositoryId: current.repositoryId, status: 'preparing', leaseToken: token },

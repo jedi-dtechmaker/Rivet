@@ -51,6 +51,12 @@ test('controller rotation, insufficient confirmations, and malformed provenance 
   rotated.repository.user.vellumIdentity.controllerLockHash = `0x${'00'.repeat(32)}`;
   await assert.rejects(findVellumBackupEvidence('user-id', 'owner/project', 1, rotated.client, rotated.dependencies), error => error.code === 'subject_changed');
 
+  const mismatchedIdentity = setup();
+  const mismatchedController = await mismatchedIdentity.dependencies.resolveController();
+  mismatchedIdentity.dependencies.resolveController = async () => ({ ...mismatchedController, did: argsToDid(`0x${'12'.repeat(20)}`) });
+  await assert.rejects(findVellumBackupEvidence('user-id', 'owner/project', 1,
+    mismatchedIdentity.client, mismatchedIdentity.dependencies), error => error.code === 'subject_changed');
+
   const pending = setup();
   pending.client.getTipHeader = async () => ({ number: 103n });
   await assert.rejects(findVellumBackupEvidence('user-id', 'owner/project', 6, pending.client, pending.dependencies), error => error.code === 'anchor_pending');
