@@ -19,7 +19,7 @@ test('release setup upgrades a legacy schema twice without losing users or backu
     await client.$executeRawUnsafe(`CREATE TABLE "${schema}"."WorkerDispatch" ("id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL REFERENCES "${schema}"."User"("id"), "kind" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
     await client.$executeRawUnsafe(`INSERT INTO "${schema}"."WorkerDispatch" ("id", "userId", "kind") VALUES ('existing-job', 'existing-user', 'backup')`);
     for (let attempt = 0; attempt < 2; attempt++) {
-      for (const script of ['setup-identity.mjs', 'setup-cota-records.mjs', 'setup-worker-dispatch.mjs']) {
+      for (const script of ['setup-identity.mjs', 'setup-cota-records.mjs', 'setup-worker-dispatch.mjs', 'setup-vellum.mjs']) {
         execFileSync(process.execPath, [path.join(__dirname, '../scripts', script)], { env: { ...process.env, DATABASE_URL: url.toString() }, stdio: 'pipe', timeout: 30000 });
       }
     }
@@ -30,7 +30,19 @@ test('release setup upgrades a legacy schema twice without losing users or backu
     const jobs = await client.$queryRawUnsafe(`SELECT "id", "state", "progress", "checkpoint" FROM "${schema}"."WorkerDispatch"`);
     assert.deepEqual(jobs, [{ id: 'existing-job', state: 'queued', progress: 0, checkpoint: null }]);
     const tables = await client.$queryRawUnsafe('SELECT table_name FROM information_schema.tables WHERE table_schema = $1', schema);
-    for (const table of ['WalletChallenge', 'CotaRegistration', 'CotaUpdate', 'WorkerDispatch']) assert.ok(tables.some(row => row.table_name === table));
+    for (const table of ['WalletChallenge', 'CotaRegistration', 'CotaUpdate', 'WorkerDispatch', 'VellumDidChallenge',
+      'VellumIdentityBinding', 'VellumBackupClaim', 'VellumIssuerLease']) assert.ok(tables.some(row => row.table_name === table));
+    const constraints = await client.$queryRawUnsafe(
+      'SELECT constraint_name FROM information_schema.table_constraints WHERE constraint_schema = $1', schema,
+    );
+    for (const constraint of ['VellumBackupClaim_status_check', 'VellumBackupClaim_nonce_check',
+      'VellumBackupClaim_prepared_check', 'VellumBackupClaim_confirmed_check', 'VellumIssuerLease_revision_check']) {
+      assert.ok(constraints.some(row => row.constraint_name === constraint));
+    }
+    const indexes = await client.$queryRawUnsafe('SELECT indexname FROM pg_indexes WHERE schemaname = $1', schema);
+    for (const index of ['VellumIdentityBinding_did_key', 'VellumBackupClaim_claimId_key',
+      'VellumBackupClaim_transactionHash_key', 'VellumBackupClaim_status_updatedAt_idx',
+      'VellumIssuerLease_repositoryId_key']) assert.ok(indexes.some(row => row.indexname === index));
   } finally {
     await client.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     await client.$disconnect();

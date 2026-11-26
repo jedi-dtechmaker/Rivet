@@ -141,6 +141,7 @@ Rivet/
 | [DATA_MODELS.md](docs/DATA_MODELS.md) | On-chain Cell structures, database schemas, data flow |
 | [USER_FLOWS.md](docs/USER_FLOWS.md) | Step-by-step user journeys for every feature |
 | [API_SPEC.md](docs/API_SPEC.md) | REST API endpoints specification |
+| [VELLUM_INTEGRATION.md](docs/VELLUM_INTEGRATION.md) | Controller-verified DID linking, public reputation, and repository-backup claims |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
 
 ---

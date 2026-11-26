@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import ProfileRepoListClient from './ProfileRepoListClient';
 import { PublicIdentity } from '@/components/PublicIdentity';
+import { PublicVellumIdentity } from '@/components/PublicVellumIdentity';
 import CopyAddressClient from './CopyAddressClient';
 
 export default async function PublicProfilePage({ params: pendingParams }: { params: Promise<{ username: string }> }) {
@@ -98,6 +99,7 @@ export default async function PublicProfilePage({ params: pendingParams }: { par
       </div>
 
       {user.isProfilePublic && <PublicIdentity username={params.username} />}
+      {user.isProfilePublic && <PublicVellumIdentity username={params.username} />}
 
       {/* Repositories Section */}
       <div className={styles.repos_section}>

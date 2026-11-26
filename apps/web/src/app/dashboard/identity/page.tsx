@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Fingerprint } from 'lucide-react';
 import { authOptions } from '@/lib/auth';
 import { WalletIdentity } from '@/components/WalletIdentity';
+import { VellumIdentity } from '@/components/VellumIdentity';
 import styles from './page.module.css';
 
 export const metadata: Metadata = { title: 'Developer identity · Rivet' };
@@ -36,6 +37,7 @@ export default async function DeveloperIdentityPage() {
         <span className={styles.network}>CKB testnet</span>
       </div>
       <WalletIdentity />
+      <VellumIdentity />
     </div>
   );
 }
