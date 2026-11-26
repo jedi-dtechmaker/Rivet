@@ -27,6 +27,9 @@ model User {
   cotaManifestEnrollment CotaManifestEnrollment?
   passport SovereignPassport?
   workerDispatches WorkerDispatch[]
+  vellumChallenge VellumDidChallenge?
+  vellumIdentity VellumIdentityBinding?
+  vellumBackupClaims VellumBackupClaim[]
 }
 
 model WalletChallenge {
@@ -73,6 +76,67 @@ model Repository {
   encryptionIv    String?
   userId          String
   user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  vellumClaim     VellumBackupClaim?
+}
+
+model VellumDidChallenge {
+  id                 String   @id
+  userId             String   @unique
+  did                String
+  controllerLockHash String
+  message            String
+  expiresAt          DateTime
+  createdAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VellumIdentityBinding {
+  userId             String   @id
+  did                String   @unique
+  controllerLockHash String
+  isPublic           Boolean  @default(false)
+  verifiedAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VellumBackupClaim {
+  repositoryId      String     @id
+  userId            String
+  subjectDid        String
+  issuerDid         String
+  schemaHash        String
+  nonce             String
+  payload           Json
+  issuedAt          DateTime
+  status            String     @default("preparing")
+  leaseToken        String?
+  claimId           String?    @unique
+  outputIndex       Int?
+  signedTransaction String?
+  transactionHash   String?    @unique
+  confirmedAt       DateTime?
+  lastErrorCode     String?
+  revision          Int        @default(1)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  repository        Repository @relation(fields: [repositoryId], references: [id], onDelete: Restrict)
+  user              User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([status, updatedAt])
+  @@index([subjectDid])
+}
+
+model VellumIssuerLease {
+  key             String   @id
+  token           String
+  repositoryId    String?  @unique
+  transactionHash String?
+  expiresAt       DateTime
+  revision        Int      @default(1)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

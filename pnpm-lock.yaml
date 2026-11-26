@@ -214,15 +214,24 @@ importers:
       '@ckb-ccc/core':
         specifier: ^1.21.0
         version: 1.21.0(typescript@5.9.3)(zod@4.6.6)
+      '@ckb-ccc/did-ckb':
+        specifier: 0.2.12
+        version: 0.2.12(typescript@5.9.3)(zod@4.6.6)
       '@ckb-ccc/spore':
         specifier: 1.6.12
         version: 1.6.12(debug@4.4.3(supports-color@11.0.0))(supports-color@11.0.0)(typescript@5.9.3)(zod@4.6.6)
+      '@joyid/ckb':
+        specifier: ^1.1.4
+        version: 1.1.4(typescript@5.9.3)(zod@4.6.6)
       '@prisma/adapter-pg':
         specifier: 5.14.0
         version: 5.14.0(pg@8.23.0)
       '@prisma/client':
         specifier: 5.14.0
         version: 5.14.0(prisma@5.14.0)
+      '@usevellum/sdk':
+        specifier: 0.2.0
+        version: 0.2.0(@ckb-ccc/core@1.21.0(typescript@5.9.3)(zod@4.6.6))(@ckb-ccc/did-ckb@0.2.12(typescript@5.9.3)(zod@4.6.6))
       crypto-js:
         specifier: ^4.2.0
         version: 4.2.0
@@ -2560,6 +2569,12 @@ packages:
   '@typescript-eslint/visitor-keys@8.70.0':
     resolution: {integrity: sha512-BoC8PiO4Hkdo0TVJh9Ntxr5MxPDI7/oFsrygN5ADelFSeXG/qgNuucIGA+L5Z6JpPTE/uRfcTWtscjbUaufepQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@usevellum/sdk@0.2.0':
+    resolution: {integrity: sha512-2zoAN32wOH0SgFZJALyvpB3BZ2nnus1BMveZdg6ZYgWFCp71tyEHXVEjH7pwArJLIYvZGZe8PExrbN4kGFmWyw==}
+    peerDependencies:
+      '@ckb-ccc/core': ^1.19.1
+      '@ckb-ccc/did-ckb': ^0.2.9
 
   '@vercel/backends@27.0.0':
     resolution: {integrity: sha512-6FeXnKKY5A4k9r6e1pF8dQgWL6HvtnFDTeVDrtADRQ2/b9F2ThBvwnfuZkWXFeMcSkyEXZZEpjnVgRtUzPqyAA==}
@@ -9208,6 +9223,12 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.70.0
       eslint-visitor-keys: 5.0.1
+
+  '@usevellum/sdk@0.2.0(@ckb-ccc/core@1.21.0(typescript@5.9.3)(zod@4.6.6))(@ckb-ccc/did-ckb@0.2.12(typescript@5.9.3)(zod@4.6.6))':
+    dependencies:
+      '@ckb-ccc/core': 1.21.0(typescript@5.9.3)(zod@4.6.6)
+      '@ckb-ccc/did-ckb': 0.2.12(typescript@5.9.3)(zod@4.6.6)
+      '@ipld/dag-cbor': 10.0.2
 
   '@vercel/backends@27.0.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@vercel/build-utils@15.5.0)(supports-color@11.0.0)':
     dependencies:

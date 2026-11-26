@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { workerAuthorized } from '@/lib/worker-auth';
 import { completeBackupJob, completeUnchangedBackupJob } from '@/lib/backup-jobs';
 import { dispatchBackup, isValidRepoFullName } from '@/lib/backupDispatch';
+import { runVellumBackupClaimIssuance } from '@/lib/vellum-backup-claims';
 
 export async function POST(req: NextRequest) {
   if (!workerAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
         if (!followUp.ok) return NextResponse.json({ error: 'Backup saved; follow-up dispatch needs a callback retry.' }, { status: 503 });
       }
     }
+    await runVellumBackupClaimIssuance({ userId: completed.job.userId, repository: body.repoFullName }).catch(() => undefined);
     return NextResponse.json({ acknowledged: true, success: true, replayed: completed.replayed,
       ...(body.unchanged === true ? { unchanged: true } : {}) });
   } catch {
